@@ -26,4 +26,4 @@
  * ```
  */
 
-import "./index.tsx";
+import "./main.tsx";

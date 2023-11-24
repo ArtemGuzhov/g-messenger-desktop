@@ -1,0 +1,35 @@
+.ant-divider-horizontal.ant-divider-with-text-center::before,
+.ant-divider-horizontal.ant-divider-with-text-center::after {
+  background-color: #fff;
+}
+.notification-time-item:hover {
+  background-color: #565570;
+  border-radius: 5px;
+}
+
+.profile-avatar span:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.chat-item:hover {
+  background-color: #565570;
+  height: 68px;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+}
+
+.ant-upload-wrapper.css-dev-only-do-not-override-xu9wm8.ant-upload-picture-circle-wrapper {
+  width: 100px;
+}
+
+.create-chat-user-item:hover {
+  background-color: #f1f1f1;
+  border-radius: 5px;
+}
+
+.message-item:hover {
+  background-color: #f1f1f1;
+}

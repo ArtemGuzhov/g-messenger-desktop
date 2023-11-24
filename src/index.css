@@ -1,0 +1,21 @@
+.chat {
+  cursor: pointer;
+}
+
+.chat:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.chat-selected {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.select-user {
+}
+
+.select-user:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}

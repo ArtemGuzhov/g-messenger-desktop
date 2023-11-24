@@ -25,7 +25,7 @@ const config: ForgeConfig = {
     new WebpackPlugin({
       mainConfig,
       devContentSecurityPolicy:
-        "connect-src 'self' http://localhost:3005/graphql 'unsafe-eval'",
+        "connect-src 'self' http://localhost:3010 ws://localhost:3010 'unsafe-eval'",
       renderer: {
         config: rendererConfig,
         entryPoints: [
