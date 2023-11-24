@@ -5,6 +5,7 @@ import { FavoriteChatList } from "./FavoriteChatList";
 import { ChatTools } from "./ChatTools";
 import { ChatList } from "./ChatList";
 import { StoreContext } from "../store/store";
+import { ChatLoader } from "./ChatLoader";
 
 export const ChatSider: FC = () => {
   const store = useContext(StoreContext);
@@ -48,7 +49,11 @@ export const ChatSider: FC = () => {
           <ChatTools />
         </div>
         <div style={{ marginTop: "20px" }}>
-          <ChatList chats={store.chatList} />
+          {store.isChatListLoading ? (
+            <ChatLoader />
+          ) : (
+            <ChatList chats={store.chatList} />
+          )}
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ export const MainLoader = () => {
         backgroundColor: "#444375",
       }}
     >
-      <span className="loader"></span>
+      <span className="main-loader"></span>
     </div>
   );
 };

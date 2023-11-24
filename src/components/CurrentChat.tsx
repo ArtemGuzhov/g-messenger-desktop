@@ -4,8 +4,8 @@ import { ChatMessageTypings } from "./ChatMessageTypings";
 import { ChatMessageList } from "./ChatMessageList";
 import { ReplyMessageModal } from "./ReplyMessageModal";
 import { MessageCommentsModal } from "./MessageCommentsModal";
-import { Typography } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+// import { Typography } from "antd";
+// import { EditOutlined } from "@ant-design/icons";
 import { StoreContext } from "../store/store";
 
 export const CurrentChat: FC = () => {

@@ -9,7 +9,12 @@ export const MessageCommentsModal: FC<{
   onClose: () => void;
   onSetRepliedMsg: () => void;
   commentedMessage: Message;
-}> = ({ isOpen, onClose, commentedMessage, onSetRepliedMsg }) => {
+}> = ({
+  isOpen,
+  onClose,
+  // commentedMessage,
+  onSetRepliedMsg,
+}) => {
   return (
     <Modal open={isOpen} onCancel={onClose} footer={null} width="50vw">
       <div

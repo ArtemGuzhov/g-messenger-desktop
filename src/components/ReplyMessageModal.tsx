@@ -8,7 +8,12 @@ export const ReplyMessageModal: FC<{
   onClose: () => void;
   onReply: () => void;
   repliedMessage: Message;
-}> = ({ isOpen, onClose, onReply, repliedMessage }) => {
+}> = ({
+  isOpen,
+  onClose,
+  onReply,
+  // repliedMessage
+}) => {
   return (
     <Modal
       open={isOpen}

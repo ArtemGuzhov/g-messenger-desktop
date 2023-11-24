@@ -2,9 +2,7 @@ import { makeAutoObservable } from "mobx";
 import { AuthService } from "../services/AuthService";
 import { createContext } from "react";
 import { UserService } from "../services/UserService";
-import { Chat, ChatEvent, Message, User } from "./store-additional";
-import { ChatService } from "../services/ChatService";
-import $socket from "../socket";
+import { Chat, Message, User } from "./store-additional";
 
 class Store {
   isInitLoading = false;

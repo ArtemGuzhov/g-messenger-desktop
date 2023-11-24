@@ -1,6 +1,6 @@
 import {
-  ArrowRightOutlined,
-  CheckCircleFilled,
+//   ArrowRightOutlined,
+//   CheckCircleFilled,
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";

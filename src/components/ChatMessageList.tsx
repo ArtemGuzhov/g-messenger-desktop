@@ -1,8 +1,8 @@
 import React, { FC, useContext } from "react";
-import { DefaultMessage } from "./DefaultMessage";
-import { ReplyMessage } from "./ReplyMessage";
-import { MessageDateDivider } from "./MessageDateDivider";
-import { InviteMessage } from "./InviteMessage";
+// import { DefaultMessage } from "./DefaultMessage";
+// import { ReplyMessage } from "./ReplyMessage";
+// import { MessageDateDivider } from "./MessageDateDivider";
+// import { InviteMessage } from "./InviteMessage";
 import { StoreContext } from "../store/store";
 
 export const ChatMessageList: FC<{
@@ -13,10 +13,10 @@ export const ChatMessageList: FC<{
   onSetRepliedMsg: () => void;
 }> = ({
   differenceHeight,
-  onSetRepliedMsg,
+  // onSetRepliedMsg,
   height,
   isMaxHeight,
-  onOpenComments,
+  // onOpenComments,
 }) => {
   const store = useContext(StoreContext);
 
@@ -33,7 +33,7 @@ export const ChatMessageList: FC<{
         paddingTop: "20px",
       }}
     >
-      {store.messageList.map((message) => (
+      {store.messageList.map(() => (
         <></>
       ))}
       {/* <InviteMessage />
