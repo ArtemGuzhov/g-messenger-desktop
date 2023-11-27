@@ -14,10 +14,18 @@ import {
   MessageType,
   User,
 } from "./store-additional";
-import $socket from "../socket";
 import { ChatService } from "../services/ChatService";
+import { io } from "socket.io-client";
+import { SOCKET_URL } from "../constants";
 
 class Store {
+  private $socket = io(SOCKET_URL, {
+    extraHeaders: {
+      Authorization: localStorage.getItem("accessToken"),
+    },
+    autoConnect: false,
+  });
+
   isInitLoading = false;
 
   isAuth = false;
@@ -51,7 +59,7 @@ class Store {
   constructor() {
     makeAutoObservable(this, {}, { deep: true });
 
-    $socket.on(ChatEvent.CREATED_CHAT, (chat: Chat) => {
+    this.$socket.on(ChatEvent.CREATED_CHAT, (chat: Chat) => {
       if (chat.type === ChatType.DIALOG) {
         const profile = chat.users.filter((user) => user.id !== this.myId)[0];
 
@@ -75,7 +83,7 @@ class Store {
       this.isCreateChatLoading = false;
     });
 
-    $socket.on(
+    this.$socket.on(
       ChatEvent.CREATED_MESSAGE,
       async (payload: {
         chatId: string;
@@ -125,7 +133,7 @@ class Store {
       }
     );
 
-    $socket.on(
+    this.$socket.on(
       ChatEvent.CREATE_MESSAGE_ERROR,
       (payload: { clientId: string; chatId: string }) => {
         const messageIndex = this.messageList.findIndex(
@@ -145,7 +153,7 @@ class Store {
       }
     );
 
-    $socket.on(ChatEvent.IS_EXIST_CHAT, (payload: { chatId: string }) => {
+    this.$socket.on(ChatEvent.IS_EXIST_CHAT, (payload: { chatId: string }) => {
       const chat = this.chatList.find((chat) => chat.id === payload.chatId);
 
       if (chat) {
@@ -153,7 +161,7 @@ class Store {
       }
     });
 
-    $socket.on(
+    this.$socket.on(
       ChatEvent.DELETED_MESSAGE,
       (payload: { id: string; chatId: string; isComment: boolean }) => {
         if (payload.isComment) {
@@ -192,6 +200,19 @@ class Store {
         });
       }
     );
+  }
+
+  setupSocket() {
+    this.$socket = io(SOCKET_URL, {
+      extraHeaders: {
+        Authorization: localStorage.getItem("accessToken"),
+      },
+      autoConnect: false,
+    });
+  }
+
+  connect() {
+    this.$socket.connect();
   }
 
   async init() {
@@ -262,10 +283,11 @@ class Store {
     try {
       this.isAuthLoading = true;
       await AuthService.logout();
+      this.$socket.disconnect();
       this.isAuth = false;
       this.profile = null;
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
+      localStorage.setItem("accessToken", null);
+      localStorage.setItem("refreshToken", null);
     } catch (error) {
       this.errors.push({
         id: v4(),
@@ -477,7 +499,7 @@ class Store {
   }
 
   async createChat(payload: CreateChatPayload) {
-    $socket.emit(ChatEvent.CREATE_CHAT, payload);
+    this.$socket.emit(ChatEvent.CREATE_CHAT, payload);
     this.isCreateChatLoading = true;
     setTimeout(() => {
       this.isCreateChatLoading = false;
@@ -533,7 +555,7 @@ class Store {
     const message = this.messageList?.find((msg) => msg.id === messageId);
 
     if (message) {
-      $socket.emit(ChatEvent.CREATE_MESSAGE, {
+      this.$socket.emit(ChatEvent.CREATE_MESSAGE, {
         text: message.text,
         chatId: message.chatId,
         repliedToId: message.repliedToId ?? null,
@@ -553,7 +575,7 @@ class Store {
     const chatId = this.selectedChat.id;
     const clientId = v4();
 
-    $socket.emit(ChatEvent.CREATE_MESSAGE, {
+    this.$socket.emit(ChatEvent.CREATE_MESSAGE, {
       ...paylod,
       chatId,
       clientId,
@@ -695,13 +717,15 @@ class Store {
   async removeMessage(messageId: string) {
     const isComment = !!this.commentedMessage;
 
-    $socket.emit(ChatEvent.DELETE_MESSAGE, {
-      id: messageId,
-      chatId: this.selectedChat.id,
-      isComment,
-    }, {
-      
-    });
+    this.$socket.emit(
+      ChatEvent.DELETE_MESSAGE,
+      {
+        id: messageId,
+        chatId: this.selectedChat.id,
+        isComment,
+      },
+      {}
+    );
 
     if (isComment) {
       this.commentList = this.commentList.map((msg) => {

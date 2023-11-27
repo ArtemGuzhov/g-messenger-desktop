@@ -7,9 +7,6 @@ import { MessageInstance } from "antd/es/message/interface";
 import { StoreContext } from "../store/store";
 import { EmptyChatList } from "../components/EmptyChatList";
 import { observer } from "mobx-react-lite";
-import { io } from "socket.io-client";
-import { SOCKET_URL } from "../constants";
-import { ConnectionManager } from "../socket/connection-manager";
 
 export const ChatPage: FC<{
   $notification: NotificationInstance;
@@ -25,18 +22,6 @@ export const ChatPage: FC<{
 }> = observer(
   ({ $notification, $error, notificationContext, errorContext }) => {
     const store = useContext(StoreContext);
-    const $socket = io(SOCKET_URL, {
-      extraHeaders: {
-        Authorization: localStorage.getItem("accessToken"),
-      },
-      autoConnect: false,
-    });
-
-    useEffect(() => {
-      if (store.isAuth) {
-        $socket.connect();
-      }
-    }, []);
 
     useEffect(() => {
       for (const n of store.notifications) {
@@ -65,30 +50,29 @@ export const ChatPage: FC<{
     useEffect(() => {
       if (!store.isInitLoading && store.profile === null) {
         store.init();
+        store.setupSocket();
+        store.connect();
       }
     }, []);
 
     return (
-      <>
-        <div style={{ display: "flex" }}>
-          {errorContext}
-          {notificationContext}
-          <div style={{ height: "100vh", width: "300px" }}>
-            <ChatSider />
-          </div>
-          {(!store.chatList.length &&
-            !store.favoriteChatList.length &&
-            store.selectedChat === null) ||
-          store.selectedChat === null ? (
-            <EmptyChatList />
-          ) : (
-            <div style={{ height: "100vh", width: "100%" }}>
-              <CurrentChat />
-            </div>
-          )}
+      <div style={{ display: "flex" }}>
+        {errorContext}
+        {notificationContext}
+        <div style={{ height: "100vh", width: "300px" }}>
+          <ChatSider />
         </div>
-        <ConnectionManager $socket={$socket} />
-      </>
+        {(!store.chatList.length &&
+          !store.favoriteChatList.length &&
+          store.selectedChat === null) ||
+        store.selectedChat === null ? (
+          <EmptyChatList />
+        ) : (
+          <div style={{ height: "100vh", width: "100%" }}>
+            <CurrentChat />
+          </div>
+        )}
+      </div>
     );
   }
 );
