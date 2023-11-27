@@ -1,12 +1,13 @@
 import { Avatar, Button, Divider, Input, Modal, Typography } from "antd";
 import React, { FC, useContext } from "react";
 import { StoreContext } from "../store/store";
+import { observer } from "mobx-react-lite";
 
 export const ProfileModal: FC<{
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
-}> = ({ isOpen, onClose, onUpdate }) => {
+}> = observer(({ isOpen, onClose, onUpdate }) => {
   const store = useContext(StoreContext);
 
   return (
@@ -29,7 +30,7 @@ export const ProfileModal: FC<{
           justifyContent: "center",
         }}
       >
-        <Typography.Text style={{ fontSize: 20 }}>Артем Гужов</Typography.Text>
+        <Typography.Text style={{ fontSize: 20 }}>{store.profile?.name}</Typography.Text>
       </div>
       <Divider>
         <Typography.Text type="secondary">Данные</Typography.Text>
@@ -97,4 +98,4 @@ export const ProfileModal: FC<{
       </div>
     </Modal>
   );
-};
+});

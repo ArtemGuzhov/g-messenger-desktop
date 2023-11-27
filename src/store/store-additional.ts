@@ -12,44 +12,24 @@ export enum ChatType {
 
 export enum MessageType {
   DEFAULT = "DEFAULT",
-  AUDIO = "AUDIO",
-  FILE = "FILE",
 }
 
 export enum MessageStatus {
-  DELIVERED = "DELIVERED",
+  PENDING = "PENDING",
   ERROR = "ERROR",
-  SEEN = "SEEN",
-  SENDING = "SENDING",
   SENT = "SENT",
 }
 
 export enum ChatEvent {
   CREATE_CHAT = "create-chat",
+  IS_EXIST_CHAT = "is-exist-chat",
   CREATED_CHAT = "created-chat",
-  CREATE_GROUP_CHAT = "create-group-chat",
+  LEAVE_GROUP = "leave-group",
+  LEFT_GROUP = "left-group",
+  IS_NOT_READ_MESSAGES_COUNT = "is-not-read-messages-count",
+  CREATE_MESSAGE_ERROR = "create-message-error",
   CREATE_MESSAGE = "create-message",
-  EDIT_MESSAGE = "edit-message",
-  DELETE_MESSAGE = "delete-message",
   CREATED_MESSAGE = "created-message",
-  EDITED_MESSAGE = "edited-message",
-  DELETED_MESSAGE = "deleted-message",
-  READ_MESSAGES = "read-messages",
-  READED_MESSAGES = "readed-messages",
-  TYPING_MESSAGE = "typing-message",
-  USER_TYPING_MESSAGE = "user-typing-message",
-  CHATS = "chats",
-  DELETE_CHAT = "delete-chat",
-  CLEAR_CHAT = "clear-chat",
-  UPDATED_CHAT = "updated-chat",
-  DELETED_CHAT = "deleted-chat",
-  CLEARED_CHAT = "cleared-chat",
-  BLOCK_CHAT = "block-chat",
-  CHANGE_STATUSES_MESSAGES = "change-status-messages",
-  CHANGED_STATUSES_MESSAGES = "changed-status-messages",
-  ACTIVE_CHATS = "active-chats",
-  REQUEST_CHATS = "request-chats",
-  UNREADED_CHATS_COUNT = "unreaded-chats-count",
 }
 
 export interface SimpleFile {
@@ -59,13 +39,25 @@ export interface SimpleFile {
   cropId: string | null;
 }
 
+export interface SimpleUser {
+  id: string;
+  avatar: SimpleFile | null;
+  name: string;
+  label: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
+  label: string;
   avatar: SimpleFile | null;
   isOnline: boolean;
   onlineAt: string;
+  favoriteChatIds: string[];
+  company: {
+    name: string;
+  };
 }
 
 export interface Message {
@@ -73,14 +65,19 @@ export interface Message {
   text: string;
   readersIds: string[];
   type: MessageType;
-  status: MessageStatus;
-  user: User;
+  user?: User;
+  status?: MessageStatus;
   userId: string;
   chatId: string;
   files: SimpleFile[];
   createdAt: string;
-  reply: Message | null;
   isRead?: boolean;
+  commentsCount?: number;
+  deletedAt: string | null;
+  isUpdated: boolean;
+  repliedTo: Message | null;
+  repliedToId: string | null;
+  simpleUser: SimpleUser;
 }
 
 export interface Chat {
@@ -92,4 +89,20 @@ export interface Chat {
   users: User[];
   isNotReadMessagesCount?: number;
   createdAt: string;
+  isPersonal: boolean;
+  usersCount?: number;
+  label?: string;
+  lastMessage?: string | null;
+  isFavorite?: boolean;
+}
+
+export interface CreateChatPayload {
+  name?: string;
+  fileId?: string;
+  userIds: string[];
+}
+
+export interface CreateMessagePayload {
+  text?: string;
+  fileIds?: string[];
 }

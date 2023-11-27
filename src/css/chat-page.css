@@ -13,7 +13,7 @@
 }
 
 .chat-item:hover {
-  background-color: #565570;
+  background-color: #565570 !important;
   height: 68px;
 }
 
@@ -31,5 +31,5 @@
 }
 
 .message-item:hover {
-  background-color: #f1f1f1;
+  background-color: #f1f1f1 !important;
 }

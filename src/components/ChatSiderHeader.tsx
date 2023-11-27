@@ -1,10 +1,13 @@
 import { NotificationTwoTone } from "@ant-design/icons";
 import { Avatar, Button, Popover, Typography } from "antd";
-import React, { FC, useState } from "react";
+import React, { FC, useContext, useState } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ProfileModal } from "./ProfileModal";
+import { observer } from "mobx-react-lite";
+import { StoreContext } from "../store/store";
 
-export const ChatSiderHeader: FC = () => {
+export const ChatSiderHeader: FC = observer(() => {
+  const store = useContext(StoreContext);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -45,7 +48,9 @@ export const ChatSiderHeader: FC = () => {
           alignItems: "center",
         }}
       >
-        <Typography.Text style={{ color: "#fff" }}>Qtim</Typography.Text>
+        <Typography.Text style={{ color: "#fff" }}>
+          {store.profile?.company?.name}
+        </Typography.Text>
       </div>
       <div
         style={{
@@ -72,4 +77,4 @@ export const ChatSiderHeader: FC = () => {
       </div>
     </div>
   );
-};
+});

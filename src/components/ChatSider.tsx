@@ -1,14 +1,37 @@
-import React, { FC, useContext } from "react";
+import React, { FC, useContext, useEffect, useState } from "react";
 import { ChatSiderHeader } from "./ChatSiderHeader";
-import { Divider, Switch, Typography } from "antd";
+import { Divider, Spin, Switch, Typography } from "antd";
 import { FavoriteChatList } from "./FavoriteChatList";
 import { ChatTools } from "./ChatTools";
 import { ChatList } from "./ChatList";
 import { StoreContext } from "../store/store";
-import { ChatLoader } from "./ChatLoader";
+import { observer } from "mobx-react-lite";
 
-export const ChatSider: FC = () => {
+export const ChatSider: FC = observer(() => {
   const store = useContext(StoreContext);
+  const [isSearch, setIsSearch] = useState(false);
+  const [isNotRead, setIsNotRead] = useState<boolean>(false);
+  const [isUpdate, setIsUpdate] = useState(false);
+
+  useEffect(() => {
+    store.getUserChats(true);
+  }, []);
+
+  useEffect(() => {
+    if (isSearch) {
+      store.concateChats();
+    }
+  }, [isSearch]);
+
+  useEffect(() => {
+    store.setIsNotReadChats();
+  }, [isNotRead]);
+
+  useEffect(() => {
+    if (isUpdate) {
+      store.getUserChats();
+    }
+  }, [isUpdate]);
 
   return (
     <div
@@ -31,7 +54,15 @@ export const ChatSider: FC = () => {
             <div
               style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}
             >
-              <Switch />
+              <Switch
+                checked={isNotRead}
+                onChange={(e) =>
+                  setIsNotRead((prev) => {
+                    setIsUpdate(prev);
+                    return e;
+                  })
+                }
+              />
             </div>
           </div>
           <Divider
@@ -42,15 +73,27 @@ export const ChatSider: FC = () => {
             }}
           />
         </div>
+        {!isSearch && !isNotRead && (
+          <div style={{ marginTop: "20px" }}>
+            <FavoriteChatList />
+          </div>
+        )}
         <div style={{ marginTop: "20px" }}>
-          <FavoriteChatList />
-        </div>
-        <div style={{ marginTop: "20px" }}>
-          <ChatTools />
+          <ChatTools isSearch={isSearch} setIsSearch={setIsSearch} />
         </div>
         <div style={{ marginTop: "20px" }}>
           {store.isChatListLoading ? (
-            <ChatLoader />
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Spin />
+            </div>
           ) : (
             <ChatList chats={store.chatList} />
           )}
@@ -58,4 +101,4 @@ export const ChatSider: FC = () => {
       </div>
     </div>
   );
-};
+});

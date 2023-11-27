@@ -11,4 +11,8 @@ export class UserService {
     const { data: response } = await $api.get("/api/v1/users/my-team");
     return response.data;
   }
+
+  static async addOrDelFavoriteChat(chatId: string) {
+    await $api.patch(`/api/v1/users/update/favorite-chats/${chatId}`);
+  }
 }

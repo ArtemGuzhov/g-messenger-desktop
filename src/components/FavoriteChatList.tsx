@@ -3,8 +3,9 @@ import { Typography } from "antd";
 import React, { FC, useContext } from "react";
 import { ChatList } from "./ChatList";
 import { StoreContext } from "../store/store";
+import { observer } from "mobx-react-lite";
 
-export const FavoriteChatList: FC = () => {
+export const FavoriteChatList: FC = observer(() => {
   const store = useContext(StoreContext);
 
   return (
@@ -22,4 +23,4 @@ export const FavoriteChatList: FC = () => {
       </div>
     </div>
   );
-};
+});

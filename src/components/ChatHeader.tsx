@@ -1,11 +1,20 @@
-import { SearchOutlined, StarOutlined, TeamOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  StarOutlined,
+  StarTwoTone,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { Avatar, Button, Divider, Typography } from "antd";
-import React, { FC } from "react";
-import { Chat } from "../store/store-additional";
+import React, { FC, useContext } from "react";
+import { Chat, ChatType } from "../store/store-additional";
+import { observer } from "mobx-react-lite";
+import { StoreContext } from "../store/store";
 
 export const ChatHeader: FC<{
   chat: Chat | null;
-}> = () => {
+}> = observer(({ chat }) => {
+  const store = useContext(StoreContext);
+
   return (
     <div
       style={{
@@ -25,7 +34,7 @@ export const ChatHeader: FC<{
       </div>
       <div style={{ marginLeft: 10 }}>
         <Typography.Text style={{ fontSize: 16 }} strong>
-          Новый чат
+          {chat.name}
         </Typography.Text>
       </div>
       <Divider
@@ -34,10 +43,17 @@ export const ChatHeader: FC<{
       />
       <div>
         <Button
-          icon={<StarOutlined />}
+          icon={
+            chat.isFavorite ? (
+              <StarTwoTone twoToneColor="orange" />
+            ) : (
+              <StarOutlined />
+            )
+          }
           style={{ marginRight: 10 }}
           type="text"
           size="large"
+          onClick={() => store.addOrDelFavoriteChat(chat.id)}
         />
       </div>
       <div>
@@ -48,15 +64,17 @@ export const ChatHeader: FC<{
           size="large"
         />
       </div>
-      <div>
-        <Button
-          icon={<TeamOutlined twoToneColor="#A7ADB4" />}
-          type="text"
-          size="large"
-        >
-          12
-        </Button>
-      </div>
+      {chat.type === ChatType.GROUP && (
+        <div>
+          <Button
+            icon={<TeamOutlined twoToneColor="#A7ADB4" />}
+            type="text"
+            size="large"
+          >
+            {chat.usersCount ?? 0}
+          </Button>
+        </div>
+      )}
     </div>
   );
-};
+});

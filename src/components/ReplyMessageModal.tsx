@@ -1,28 +1,27 @@
 import { Avatar, Modal, Typography } from "antd";
 import TextArea from "antd/es/input/TextArea";
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import { Message } from "../store/store-additional";
+import { observer } from "mobx-react-lite";
+import { getMessageTime } from "../helpers";
 
 export const ReplyMessageModal: FC<{
   isOpen: boolean;
   onClose: () => void;
-  onReply: () => void;
+  onReply: (text: string) => void;
   repliedMessage: Message;
-}> = ({
-  isOpen,
-  onClose,
-  onReply,
-  // repliedMessage
-}) => {
+}> = observer(({ isOpen, onClose, onReply, repliedMessage }) => {
+  const [text, setText] = useState("");
+
   return (
     <Modal
       open={isOpen}
       onCancel={onClose}
       title="Ответить на сообщение"
-      onOk={onReply}
+      onOk={() => onReply(text)}
       okText="Ответить"
       cancelText="Отмена"
-      okButtonProps={{ style: { backgroundColor: "#444375", color: "#fff" } }}
+      okButtonProps={{ disabled: !text }}
     >
       <div
         style={{
@@ -44,14 +43,16 @@ export const ReplyMessageModal: FC<{
         >
           <Avatar size="large" />
         </div>
-        <div style={{ width: "100vw - 380px", paddingLeft: "10px" }}>
+        <div style={{ width: "100vw - 380px" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <Typography.Text strong>Артем Гужов</Typography.Text>
+            <Typography.Text strong>
+              {repliedMessage.simpleUser.name}
+            </Typography.Text>
             <Typography.Text
               type="secondary"
               style={{ fontSize: 11, marginLeft: 10 }}
             >
-              16:12
+              {getMessageTime(repliedMessage.createdAt)}
             </Typography.Text>
           </div>
           <Typography.Paragraph
@@ -59,18 +60,16 @@ export const ReplyMessageModal: FC<{
               maxHeight: "200px",
               overflow: "auto",
             }}
-          >{`
-        ource: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194007.191978:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.976367:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.976830:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.980231:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.980256:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.980469:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"code":-32602,"message":"Frame tree node for given frame not found"}", source: devtools://devtools/bundled/core/protocol_client/protocol_client.js (1)
-[44990:1122/194009.980490:ERROR:CONSOLE(1)] "Request Storage.getStorageKeyForFrame failed. {"`}</Typography.Paragraph>
+          >
+            {repliedMessage.text ?? ""}
+          </Typography.Paragraph>
         </div>
       </div>
-      <TextArea style={{ marginTop: "20px", resize: "none", height: "80px" }} />
+      <TextArea
+        style={{ marginTop: "20px", resize: "none", height: "80px" }}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
     </Modal>
   );
-};
+});

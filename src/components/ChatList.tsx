@@ -1,13 +1,14 @@
 import React, { FC } from "react";
 import { ChatItem } from "./ChatItem";
 import { Chat } from "../store/store-additional";
+import { observer } from "mobx-react-lite";
 
-export const ChatList: FC<{ chats: Chat[] }> = ({ chats }) => {
+export const ChatList: FC<{ chats: Chat[] }> = observer(({ chats }) => {
   return (
     <div>
-      {chats.map(() => (
-        <ChatItem />
+      {chats.map((chat) => (
+        <ChatItem key={chat.id} {...chat} />
       ))}
     </div>
   );
-};
+});

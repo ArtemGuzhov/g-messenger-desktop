@@ -5,12 +5,30 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { Button, Input, Typography } from "antd";
-import React, { FC, useState } from "react";
+import React, { FC, useContext, useEffect, useState } from "react";
 import { CreateChatModal } from "./CreateChatModal";
+import { StoreContext } from "../store/store";
+import { CreateChatPayload } from "../store/store-additional";
+import { observer } from "mobx-react-lite";
 
-export const ChatTools: FC = () => {
-  const [isSearch, setIsSearch] = useState(false);
+export const ChatTools: FC<{
+  isSearch: boolean;
+  setIsSearch: (v: boolean) => void;
+}> = observer(({ isSearch, setIsSearch }) => {
+  const store = useContext(StoreContext);
+  const [search, setSearch] = useState("");
   const [isCreateChatModalOpen, setIsCreateChatModalOpen] = useState(false);
+
+  const onCreate = (payload: CreateChatPayload) => {
+    store.createChat(payload);
+    setIsCreateChatModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (search) {
+      store.searchInChat(search);
+    }
+  }, [search]);
 
   return (
     <div style={{ width: "100%" }}>
@@ -40,7 +58,10 @@ export const ChatTools: FC = () => {
           {isSearch ? (
             <Button
               icon={<CloseOutlined style={{ color: "#A7ADB4" }} />}
-              onClick={() => setIsSearch(false)}
+              onClick={() => {
+                setIsSearch(false);
+                store.getUserChats();
+              }}
               type="text"
             />
           ) : (
@@ -58,7 +79,7 @@ export const ChatTools: FC = () => {
           <CreateChatModal
             isOpen={isCreateChatModalOpen}
             onClose={() => setIsCreateChatModalOpen(false)}
-            onCreate={() => setIsCreateChatModalOpen(false)}
+            onCreate={onCreate}
           />
         </div>
       </div>
@@ -70,10 +91,12 @@ export const ChatTools: FC = () => {
               color: "#fff",
               borderColor: "#A7ADB4",
             }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск"
           />
         </div>
       )}
     </div>
   );
-};
+});

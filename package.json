@@ -26,6 +26,7 @@
     "@electron-forge/plugin-webpack": "^6.4.2",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
+    "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
@@ -64,6 +65,7 @@
     "resolve-url-loader": "^5.0.0",
     "socket.io-client": "^4.7.2",
     "subscriptions-transport-ws": "^0.11.0",
-    "url-loader": "^4.1.1"
+    "url-loader": "^4.1.1",
+    "uuid": "^9.0.1"
   }
 }

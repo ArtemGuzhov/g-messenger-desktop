@@ -1,8 +1,21 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
+import { v4 } from "uuid";
 import { AuthService } from "../services/AuthService";
 import { createContext } from "react";
 import { UserService } from "../services/UserService";
-import { Chat, Message, User } from "./store-additional";
+import {
+  Chat,
+  ChatEvent,
+  ChatType,
+  CreateChatPayload,
+  CreateMessagePayload,
+  Message,
+  MessageStatus,
+  MessageType,
+  User,
+} from "./store-additional";
+import $socket from "../socket";
+import { ChatService } from "../services/ChatService";
 
 class Store {
   isInitLoading = false;
@@ -10,19 +23,22 @@ class Store {
   isAuth = false;
   isAuthLoading = false;
 
+  myId = "";
   profile: User | null = null;
   isProfileLoading = false;
 
+  isCreateChatLoading = false;
   chatList: Chat[] = [];
   favoriteChatList: Chat[] = [];
+  favoriteChatIds: string[] = [];
   selectedChat: Chat | null = null;
   isChatListLoading = false;
 
+  isMessageListLoading = true;
   messageList: Message[] = [];
   commentedMessage: Message | null = null;
   repliedMessage: Message | null = null;
   commentList: Message[] = [];
-  isMessageList = false;
 
   userList: User[] = [];
   isUserListLoading = false;
@@ -31,7 +47,87 @@ class Store {
   errors: { id: string; message: string }[] = [];
 
   constructor() {
-    makeAutoObservable(this, undefined, { deep: true });
+    makeAutoObservable(this, {}, { deep: true });
+
+    $socket.on(ChatEvent.CREATED_CHAT, (chat: Chat) => {
+      if (chat.type === ChatType.DIALOG) {
+        const profile = chat.users.filter((user) => user.id !== this.myId)[0];
+
+        chat = {
+          ...chat,
+          avatar: profile.avatar ?? null,
+          name: profile.name ?? null,
+          label: profile.label,
+        };
+      } else {
+        chat = { ...chat, label: `${chat.usersCount}` };
+      }
+
+      const isFavorite = !!this.favoriteChatIds.includes(chat.id);
+
+      if (isFavorite) {
+        this.favoriteChatList = [chat, ...this.favoriteChatList];
+        return;
+      }
+      this.chatList = [chat, ...this.chatList];
+      this.isCreateChatLoading = false;
+    });
+
+    $socket.on(
+      ChatEvent.CREATED_MESSAGE,
+      async (payload: {
+        chatId: string;
+        clientId: string;
+        message: Message;
+      }) => {
+        const messageIndex = this.messageList.findIndex(
+          (msg) =>
+            msg.id === payload.clientId &&
+            msg.chatId === payload.chatId &&
+            msg.status === MessageStatus.PENDING
+        );
+
+        this.messageList = this.messageList.map((msg, index) => {
+          if (index === messageIndex) {
+            return {
+              ...payload.message,
+              status: MessageStatus.SENT,
+              repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
+            };
+          }
+
+          return msg;
+        });
+      }
+    );
+
+    $socket.on(
+      ChatEvent.CREATE_MESSAGE_ERROR,
+      (payload: { clientId: string; chatId: string }) => {
+        const messageIndex = this.messageList.findIndex(
+          (msg) =>
+            msg.id === payload.clientId &&
+            msg.chatId === payload.chatId &&
+            msg.status === MessageStatus.PENDING
+        );
+
+        this.messageList = this.messageList.map((msg, index) => {
+          if (index === messageIndex) {
+            return { ...msg, status: MessageStatus.ERROR };
+          }
+
+          return msg;
+        });
+      }
+    );
+
+    $socket.on(ChatEvent.IS_EXIST_CHAT, (payload: { chatId: string }) => {
+      const chat = this.chatList.find((chat) => chat.id === payload.chatId);
+
+      if (chat) {
+        this.selectedChat = chat;
+      }
+    });
   }
 
   async init() {
@@ -71,7 +167,7 @@ class Store {
       this.isAuth = true;
     } catch (error) {
       this.errors.push({
-        id: "",
+        id: v4(),
         message: "Ошибка при авторизации",
       });
     } finally {
@@ -86,7 +182,7 @@ class Store {
       this.isAuth = true;
     } catch (error) {
       this.errors.push({
-        id: "",
+        id: v4(),
         message: "Ошибка при авторизации",
       });
     } finally {
@@ -104,7 +200,7 @@ class Store {
       localStorage.removeItem("refreshToken");
     } catch (error) {
       this.errors.push({
-        id: "",
+        id: v4(),
         message: "Ошибка при выходе",
       });
     } finally {
@@ -121,15 +217,316 @@ class Store {
       this.isProfileLoading = true;
       const user = await UserService.getProfile();
       this.profile = user;
+      this.favoriteChatIds = user.favoriteChatIds;
+      this.myId = user.id;
     } catch (error) {
       this.errors.push({
-        id: "",
+        id: v4(),
         message: "Ошибка получения профиля",
       });
       this.isAuth = false;
     } finally {
       this.isProfileLoading = false;
     }
+  }
+
+  async getUserTeam() {
+    try {
+      this.isUserListLoading = true;
+      const users = await UserService.getTeam();
+      this.userList = users;
+    } catch (error) {
+      this.errors.push({
+        id: v4(),
+        message: "Ошибка получения пользователей",
+      });
+    } finally {
+      this.isUserListLoading = false;
+    }
+  }
+
+  async searchInTeam(emailOrName: string) {
+    emailOrName = emailOrName.toLowerCase();
+    await this.getUserTeam();
+    this.userList = this.userList.filter(
+      (user) =>
+        user.name.toLowerCase().includes(emailOrName) ||
+        user.email.includes(emailOrName)
+    );
+  }
+
+  async addOrDelFavoriteChat(chatId: string) {
+    try {
+      await UserService.addOrDelFavoriteChat(chatId);
+
+      const isExist = this.favoriteChatIds.find((id) => id === chatId);
+
+      if (isExist) {
+        const chat = this.favoriteChatList.find((chat) => chat.id === chatId);
+
+        this.favoriteChatIds = this.favoriteChatIds.filter(
+          (id) => id !== chatId
+        );
+        this.favoriteChatList = this.favoriteChatList.filter(
+          (chat) => chat.id !== chatId
+        );
+        this.chatList = [...this.chatList, { ...chat, isFavorite: false }];
+        this.selectedChat = { ...this.selectedChat, isFavorite: false };
+
+        return;
+      }
+
+      const chat = this.chatList.find((chat) => chat.id === chatId);
+
+      runInAction(() => {
+        this.favoriteChatIds = [...this.favoriteChatIds, chatId];
+        this.chatList = this.chatList.filter((chat) => chat.id !== chatId);
+        this.favoriteChatList = [
+          ...this.favoriteChatList,
+          { ...chat, isFavorite: true },
+        ];
+        this.selectedChat = { ...this.selectedChat, isFavorite: true };
+      });
+    } catch (error) {
+      this.errors.push({
+        id: v4(),
+        message: "Ошибка изменения чата",
+      });
+    }
+  }
+
+  /**
+   * Chats
+   */
+
+  async getUserChats(isInit?: boolean) {
+    try {
+      this.isChatListLoading = true;
+      const chats = await ChatService.getChats();
+
+      const favoriteChatList: Chat[] = [];
+      const chatList: Chat[] = [];
+
+      for (let chat of chats) {
+        const isFavorite = !!this.favoriteChatIds.includes(chat.id);
+
+        if (chat.type === ChatType.DIALOG) {
+          const profile = chat.users.filter((user) => user.id !== this.myId)[0];
+
+          chat = {
+            ...chat,
+            avatar: profile.avatar ?? null,
+            name: profile.name ?? null,
+            label: profile.label,
+          };
+        } else {
+          chat = { ...chat, label: `${chat.usersCount}` };
+        }
+
+        if (isFavorite) {
+          favoriteChatList.push({ ...chat, isFavorite });
+          continue;
+        }
+        chatList.push({ ...chat, isFavorite });
+      }
+
+      runInAction(() => {
+        this.chatList = chatList;
+        this.favoriteChatList = favoriteChatList;
+
+        if (isInit && chats.length) {
+          if (chatList.length) {
+            this.selectedChat = chatList[0];
+            return;
+          }
+
+          if (favoriteChatList.length) {
+            this.selectedChat = favoriteChatList[0];
+          }
+        }
+      });
+    } catch (error) {
+      this.errors.push({
+        id: v4(),
+        message: "Ошибка получения чатов",
+      });
+    } finally {
+      this.isChatListLoading = false;
+    }
+  }
+
+  async searchInChat(name: string) {
+    try {
+      this.isChatListLoading = true;
+      name = name.toLowerCase();
+      this.favoriteChatList = [];
+      const chats = await ChatService.getChats();
+
+      const chatList = [];
+
+      for (let chat of chats) {
+        if (chat.type === ChatType.DIALOG) {
+          const profile = chat.users.filter(
+            (user) => user.id !== this.profile.id
+          )[0];
+
+          chat = {
+            ...chat,
+            avatar: profile.avatar ?? null,
+            name: profile.name ?? null,
+            label: profile.label,
+          };
+        } else {
+          chat = { ...chat, label: `${chat.usersCount}` };
+        }
+
+        chatList.push(chat);
+      }
+
+      this.chatList = chatList.filter((chat) =>
+        chat.name.toLowerCase().includes(name)
+      );
+    } catch {
+      await this.getUserChats();
+    } finally {
+      this.isChatListLoading = false;
+    }
+  }
+
+  async concateChats() {
+    this.chatList = [...this.chatList, ...this.favoriteChatList];
+  }
+
+  async setChat(chatId: string) {
+    const chat = [...this.chatList, ...this.favoriteChatList].find(
+      ({ id }) => id === chatId
+    );
+    this.selectedChat = chat;
+  }
+
+  async setIsNotReadChats() {
+    this.chatList = [...this.chatList, ...this.favoriteChatList].filter(
+      (chat) => chat.isNotReadMessagesCount
+    );
+  }
+
+  async createChat(payload: CreateChatPayload) {
+    $socket.emit(ChatEvent.CREATE_CHAT, payload);
+    this.isCreateChatLoading = true;
+    setTimeout(() => {
+      this.isCreateChatLoading = false;
+    }, 5_000);
+  }
+
+  /**
+   * Messages
+   */
+
+  async getChatMessages() {
+    try {
+      this.isMessageListLoading = true;
+      const messages = await ChatService.getChatMessages(this.selectedChat.id);
+      this.messageList = messages;
+    } catch {
+      this.errors.push({
+        id: v4(),
+        message: "Ошибка получения сообщений",
+      });
+    } finally {
+      this.isMessageListLoading = false;
+    }
+  }
+
+  async setRepliedMessage(messageId: string) {
+    const message = this.messageList.find(({ id }) => id === messageId);
+
+    if (message) {
+      this.repliedMessage = message;
+    }
+  }
+
+  async setCommentedMessage(messageId: string) {
+    const message = this.messageList.find(({ id }) => id === messageId);
+
+    if (message) {
+      this.commentedMessage = message;
+    }
+  }
+
+  async resentMessage(messageId: string) {
+    const message = this.messageList?.find((msg) => msg.id === messageId);
+
+    if (message) {
+      $socket.emit(ChatEvent.CREATE_MESSAGE, {
+        text: message.text,
+        chatId: message.chatId,
+        repliedToId: message.repliedToId ?? null,
+        clientId: messageId,
+      });
+      this.messageList = this.messageList.map((msg) => {
+        if (msg.id === message.id) {
+          return { ...message, status: MessageStatus.PENDING };
+        }
+
+        return msg;
+      });
+    }
+  }
+
+  async createMessage(paylod: CreateMessagePayload) {
+    const chatId = this.selectedChat.id;
+    const clientId = v4();
+
+    $socket.emit(ChatEvent.CREATE_MESSAGE, {
+      ...paylod,
+      chatId,
+      clientId,
+      repliedToId: this.repliedMessage?.id ?? null,
+    });
+
+    this.messageList = [
+      {
+        id: clientId,
+        chatId: chatId,
+        userId: this.myId,
+        simpleUser: {
+          name: this.profile.name,
+          avatar: this.profile.avatar,
+          id: this.myId,
+          label: this.profile.label,
+        },
+        type: MessageType.DEFAULT,
+        status: MessageStatus.PENDING,
+        text: paylod.text,
+        commentsCount: 0,
+        createdAt: new Date().toISOString(),
+        deletedAt: null,
+        files: [],
+        isUpdated: false,
+        readersIds: [],
+        repliedTo: this.repliedMessage,
+        repliedToId: this.repliedMessage?.id ?? null,
+      },
+      ...this.messageList,
+    ];
+
+    this.chatList = this.chatList.map((chat) => {
+      if (chat.id === chatId) {
+        return { ...chat, lastMessage: paylod.text };
+      }
+
+      return chat;
+    });
+
+    this.favoriteChatList = this.favoriteChatList.map((chat) => {
+      if (chat.id === chatId) {
+        return { ...chat, lastMessage: paylod.text };
+      }
+
+      return chat;
+    });
+
+    this.repliedMessage = null;
   }
 }
 

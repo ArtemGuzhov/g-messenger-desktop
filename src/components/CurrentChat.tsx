@@ -7,22 +7,26 @@ import { MessageCommentsModal } from "./MessageCommentsModal";
 // import { Typography } from "antd";
 // import { EditOutlined } from "@ant-design/icons";
 import { StoreContext } from "../store/store";
+import { observer } from "mobx-react-lite";
 
-export const CurrentChat: FC = () => {
+export const CurrentChat: FC = observer(() => {
   const store = useContext(StoreContext);
   const [totalHeight, setTotalHeight] = useState(151);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
 
-  const onReplyMsg = () => {
+  const onReplyMsg = (text: string) => {
     setIsReplyModalOpen(false);
+    store.createMessage({ text });
   };
 
-  const onSetRepliedMsg = () => {
+  const onSetRepliedMsg = (msgId: string) => {
+    store.setRepliedMessage(msgId);
     setIsReplyModalOpen(true);
   };
 
-  const onOpenComments = () => {
+  const onOpenComments = (msgId: string) => {
+    store.setCommentedMessage(msgId);
     setIsCommentModalOpen(true);
   };
 
@@ -49,6 +53,7 @@ export const CurrentChat: FC = () => {
         differenceHeight={totalHeight}
         onSetRepliedMsg={onSetRepliedMsg}
         onOpenComments={onOpenComments}
+        messages={store.messageList}
       />
       {/* <div
         style={{
@@ -68,4 +73,4 @@ export const CurrentChat: FC = () => {
       <ChatMessageTypings setTotalHeight={setTotalHeight} />
     </div>
   );
-};
+});

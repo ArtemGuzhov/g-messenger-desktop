@@ -16,10 +16,6 @@ const App = () => {
 
   const contextValue = useMemo(() => ({ name: "item" }), []);
 
-  useEffect(() => {
-    console.log(store.isInitLoading);
-  }, [store.isInitLoading]);
-
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
       {store.isInitLoading ? (

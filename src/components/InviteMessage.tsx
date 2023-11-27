@@ -1,15 +1,16 @@
 import {
-//   ArrowRightOutlined,
-//   CheckCircleFilled,
+  //   ArrowRightOutlined,
+  //   CheckCircleFilled,
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, Tooltip, Typography } from "antd";
 import React, { FC, useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
 
 export const InviteMessage: FC<{
   isOnlyMsg?: boolean;
-}> = ({ isOnlyMsg }) => {
+}> = observer(({ isOnlyMsg }) => {
   const [isFocus, setIsFocus] = useState(false);
   const [isCopy, setIsCopy] = useState(false);
 
@@ -128,4 +129,4 @@ export const InviteMessage: FC<{
       </div>
     </div>
   );
-};
+});
