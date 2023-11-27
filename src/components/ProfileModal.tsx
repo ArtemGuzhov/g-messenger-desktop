@@ -2,6 +2,7 @@ import { Avatar, Button, Divider, Input, Modal, Typography } from "antd";
 import React, { FC, useContext } from "react";
 import { StoreContext } from "../store/store";
 import { observer } from "mobx-react-lite";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ProfileModal: FC<{
   isOpen: boolean;
@@ -20,7 +21,18 @@ export const ProfileModal: FC<{
           justifyContent: "center",
         }}
       >
-        <Avatar size={80} />
+        {!store.profile?.avatar ? (
+          <Avatar size={80} alt="profile-avatar-modal">
+            {store.profile?.name ? store.profile.name[0] : ""}
+          </Avatar>
+        ) : (
+          <AvatarWithImage
+            fileId={store.profile.avatar.id}
+            size={80}
+            alt="profile-avatar-modal"
+            title={store.profile.name[0]}
+          />
+        )}
       </div>
       <div
         style={{
@@ -30,7 +42,9 @@ export const ProfileModal: FC<{
           justifyContent: "center",
         }}
       >
-        <Typography.Text style={{ fontSize: 20 }}>{store.profile?.name}</Typography.Text>
+        <Typography.Text style={{ fontSize: 20 }}>
+          {store.profile?.name}
+        </Typography.Text>
       </div>
       <Divider>
         <Typography.Text type="secondary">Данные</Typography.Text>

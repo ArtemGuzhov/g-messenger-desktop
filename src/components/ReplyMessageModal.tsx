@@ -4,6 +4,7 @@ import React, { FC, useState } from "react";
 import { Message } from "../store/store-additional";
 import { observer } from "mobx-react-lite";
 import { getMessageTime } from "../helpers";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ReplyMessageModal: FC<{
   isOpen: boolean;
@@ -41,7 +42,16 @@ export const ReplyMessageModal: FC<{
             paddingLeft: "20px",
           }}
         >
-          <Avatar size="large" />
+          {repliedMessage?.simpleUser?.avatar ? (
+            <AvatarWithImage
+              fileId={repliedMessage.simpleUser.avatar.id}
+              size="large"
+              alt={`${repliedMessage.simpleUser.avatar.id}`}
+              title={repliedMessage.simpleUser.name[0]}
+            />
+          ) : (
+            <Avatar size="large">{repliedMessage?.simpleUser?.name[0]}</Avatar>
+          )}
         </div>
         <div style={{ width: "100vw - 380px" }}>
           <div style={{ display: "flex", alignItems: "center" }}>

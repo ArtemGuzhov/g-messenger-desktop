@@ -11,15 +11,28 @@ import React, { FC, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Message, MessageStatus } from "../store/store-additional";
 import { getCommentsCountLabel, getMessageTime } from "../helpers";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ReplyMessage: FC<{
   isOnlyMsg?: boolean;
+  message: Message;
+  isMy: boolean;
+  isDeleted: boolean;
+  resentMessage: (msgId: string) => void;
   onReply: (msgId: string) => void;
   onOpenComments: (msgId: string) => void;
-  message: Message;
-  resentMessage: (msgId: string) => void;
+  onRemove: (msgId: string) => void;
 }> = observer(
-  ({ isOnlyMsg, onReply, onOpenComments, message, resentMessage }) => {
+  ({
+    isOnlyMsg,
+    message,
+    isMy,
+    isDeleted,
+    resentMessage,
+    onReply,
+    onOpenComments,
+    onRemove
+  }) => {
     const [isFocus, setIsFocus] = useState(false);
     const [isCopy, setIsCopy] = useState(false);
 
@@ -72,8 +85,15 @@ export const ReplyMessage: FC<{
                   </Typography.Text>
                 )}
               </div>
+            ) : message?.simpleUser?.avatar ? (
+              <AvatarWithImage
+                fileId={message.simpleUser.avatar.id}
+                size="large"
+                alt={`${message.simpleUser.avatar.id}`}
+                title={message.simpleUser.name[0]}
+              />
             ) : (
-              <Avatar size="large" />
+              <Avatar size="large">{message.simpleUser.name[0]}</Avatar>
             )}
           </div>
           <div
@@ -111,7 +131,16 @@ export const ReplyMessage: FC<{
                   justifyContent: "center",
                 }}
               >
-                <Avatar size="large" />
+                {message?.repliedTo?.simpleUser?.avatar ? (
+                  <AvatarWithImage
+                    fileId={message.repliedTo.simpleUser.avatar.id}
+                    size="large"
+                    alt={`${message.repliedTo.simpleUser.avatar.id}`}
+                    title={message.repliedTo.simpleUser.name[0]}
+                  />
+                ) : (
+                  <Avatar size="large" />
+                )}
               </div>
               <div style={{ width: "100vw - 380px" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
@@ -152,12 +181,14 @@ export const ReplyMessage: FC<{
                       onClick={() => onReply(message.id)}
                     />
                   </Tooltip>
-                  <Tooltip placement="topRight" title={"Комментировать"}>
-                    <Button
-                      icon={<CommentOutlined />}
-                      onClick={() => onOpenComments(message.id)}
-                    />
-                  </Tooltip>
+                  {onOpenComments && (
+                    <Tooltip placement="topRight" title={"Комментировать"}>
+                      <Button
+                        icon={<CommentOutlined />}
+                        onClick={() => onOpenComments(message.id)}
+                      />
+                    </Tooltip>
+                  )}
                   <Tooltip
                     placement="topRight"
                     title={isCopy ? "Скопировано" : "Копировать"}

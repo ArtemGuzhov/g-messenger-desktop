@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { StoreContext } from "./store/store";
 import { observer } from "mobx-react-lite";
 import { ChatPage } from "./pages/ChatPage";

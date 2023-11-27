@@ -9,6 +9,7 @@ import React, { FC, useContext } from "react";
 import { Chat, ChatType } from "../store/store-additional";
 import { observer } from "mobx-react-lite";
 import { StoreContext } from "../store/store";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ChatHeader: FC<{
   chat: Chat | null;
@@ -30,7 +31,16 @@ export const ChatHeader: FC<{
       }}
     >
       <div>
-        <Avatar size="large" />
+        {chat?.avatar ? (
+          <AvatarWithImage
+            fileId={chat.avatar.id}
+            size="large"
+            alt={`${chat.avatar.id}`}
+            title={chat.name[0]}
+          />
+        ) : (
+          <Avatar size="large">{chat.name[0]}</Avatar>
+        )}
       </div>
       <div style={{ marginLeft: 10 }}>
         <Typography.Text style={{ fontSize: 16 }} strong>

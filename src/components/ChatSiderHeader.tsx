@@ -5,6 +5,7 @@ import { NotificationPopover } from "./NotificationPopover";
 import { ProfileModal } from "./ProfileModal";
 import { observer } from "mobx-react-lite";
 import { StoreContext } from "../store/store";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ChatSiderHeader: FC = observer(() => {
   const store = useContext(StoreContext);
@@ -33,7 +34,23 @@ export const ChatSiderHeader: FC = observer(() => {
           alignItems: "center",
         }}
       >
-        <Avatar size="large" onClick={() => setIsProfileModalOpen(true)} />
+        {!store.profile?.avatar ? (
+          <Avatar
+            size="large"
+            onClick={() => setIsProfileModalOpen(true)}
+            alt="profile-avatar"
+          >
+            {store.profile?.name ? store.profile.name[0] : ""}
+          </Avatar>
+        ) : (
+          <AvatarWithImage
+            fileId={store.profile.avatar.id}
+            size="large"
+            alt="profile-avatar"
+            onClick={() => setIsProfileModalOpen(true)}
+            title={store.profile.name[0]}
+          />
+        )}
         <ProfileModal
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}

@@ -11,15 +11,28 @@ import React, { FC, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Message, MessageStatus } from "../store/store-additional";
 import { getCommentsCountLabel, getMessageTime } from "../helpers";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const DefaultMessage: FC<{
   isOnlyMsg?: boolean;
+  message: Message;
+  isMy: boolean;
+  isDeleted: boolean;
+  resentMessage: (msgId: string) => void;
   onReply: (msgId: string) => void;
   onOpenComments: (msgId: string) => void;
-  message: Message;
-  resentMessage: (msgId: string) => void;
+  onRemove: (msgId: string) => void;
 }> = observer(
-  ({ isOnlyMsg, onReply, onOpenComments, message, resentMessage }) => {
+  ({
+    isOnlyMsg,
+    message,
+    isMy,
+    isDeleted,
+    resentMessage,
+    onReply,
+    onOpenComments,
+    onRemove,
+  }) => {
     const [isFocus, setIsFocus] = useState(false);
     const [isCopy, setIsCopy] = useState(false);
 
@@ -72,8 +85,15 @@ export const DefaultMessage: FC<{
                   </Typography.Text>
                 )}
               </div>
+            ) : message?.simpleUser?.avatar ? (
+              <AvatarWithImage
+                fileId={message.simpleUser.avatar.id}
+                size="large"
+                alt={`${message.simpleUser.avatar.id}`}
+                title={message.simpleUser.name[0]}
+              />
             ) : (
-              <Avatar size="large" />
+              <Avatar size="large">{message.simpleUser.name[0]}</Avatar>
             )}
           </div>
           <div style={{ width: "100vw - 380px" }}>
@@ -90,10 +110,17 @@ export const DefaultMessage: FC<{
                 </Typography.Text>
               </div>
             )}
-            <Typography.Paragraph>{message.text ?? ""}</Typography.Paragraph>
+            {isDeleted ? (
+              <Typography.Paragraph type="secondary">
+                Сообщение удалено
+              </Typography.Paragraph>
+            ) : (
+              <Typography.Paragraph>{message.text ?? ""}</Typography.Paragraph>
+            )}
           </div>
           <div style={{ position: "absolute", right: 10, top: "-10px" }}>
             {isFocus &&
+              !isDeleted &&
               (message.status === MessageStatus.ERROR ||
               message.status === MessageStatus.PENDING ? (
                 <Button.Group>
@@ -112,12 +139,14 @@ export const DefaultMessage: FC<{
                       onClick={() => onReply(message.id)}
                     />
                   </Tooltip>
-                  <Tooltip placement="topRight" title={"Комментировать"}>
-                    <Button
-                      icon={<CommentOutlined />}
-                      onClick={() => onOpenComments(message.id)}
-                    />
-                  </Tooltip>
+                  {onOpenComments && (
+                    <Tooltip placement="topRight" title={"Комментировать"}>
+                      <Button
+                        icon={<CommentOutlined />}
+                        onClick={() => onOpenComments(message.id)}
+                      />
+                    </Tooltip>
+                  )}
                   <Tooltip
                     placement="topRight"
                     title={isCopy ? "Скопировано" : "Копировать"}
@@ -130,20 +159,23 @@ export const DefaultMessage: FC<{
                       }}
                     />
                   </Tooltip>
-                  <Tooltip placement="topRight" title={"Удалить"}>
-                    <Popconfirm
-                      title="Удалить данное сообщение?"
-                      okText="Да"
-                      cancelText="Нет"
-                      placement="bottomLeft"
-                    >
-                      <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm>
-                  </Tooltip>
+                  {isMy && (
+                    <Tooltip placement="topRight" title={"Удалить"}>
+                      <Popconfirm
+                        title="Удалить данное сообщение?"
+                        okText="Да"
+                        cancelText="Нет"
+                        placement="bottomLeft"
+                        onPopupClick={() => onRemove(message.id)}
+                      >
+                        <Button icon={<DeleteOutlined />} danger />
+                      </Popconfirm>
+                    </Tooltip>
+                  )}
                 </Button.Group>
               ))}
           </div>
-          {onOpenComments && (
+          {onOpenComments && !isDeleted && (
             <div
               style={{
                 position: "absolute",

@@ -17,7 +17,7 @@ export enum MessageType {
 export enum MessageStatus {
   PENDING = "PENDING",
   ERROR = "ERROR",
-  SENT = "SENT",
+  OK = "OK",
 }
 
 export enum ChatEvent {
@@ -30,6 +30,8 @@ export enum ChatEvent {
   CREATE_MESSAGE_ERROR = "create-message-error",
   CREATE_MESSAGE = "create-message",
   CREATED_MESSAGE = "created-message",
+  DELETE_MESSAGE = "delete-chat",
+  DELETED_MESSAGE = "deleted-message",
 }
 
 export interface SimpleFile {
@@ -78,6 +80,7 @@ export interface Message {
   repliedTo: Message | null;
   repliedToId: string | null;
   simpleUser: SimpleUser;
+  rootId: string | null;
 }
 
 export interface Chat {

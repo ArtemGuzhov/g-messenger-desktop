@@ -4,9 +4,10 @@ import React, { FC, useContext } from "react";
 import { observer } from "mobx-react-lite";
 import { Chat, ChatType } from "../store/store-additional";
 import { StoreContext } from "../store/store";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ChatItem: FC<Chat> = observer(
-  ({ id, name, isNotReadMessagesCount, label, type, lastMessage }) => {
+  ({ id, name, isNotReadMessagesCount, label, type, lastMessage, avatar }) => {
     const store = useContext(StoreContext);
 
     return (
@@ -47,7 +48,18 @@ export const ChatItem: FC<Chat> = observer(
             ></div>
           </div>
           <div style={{ width: 45 }}>
-            <Avatar size={45} />
+            {avatar ? (
+              <AvatarWithImage
+                size={45}
+                alt={`chat-avatar-item-${id}`}
+                fileId={avatar.id}
+                title={name[0]}
+              />
+            ) : (
+              <Avatar size={45} alt={`chat-avatar-item-${id}`}>
+                {name[0]}
+              </Avatar>
+            )}
           </div>
           <div style={{ marginLeft: "10px", width: "165px" }}>
             <div>
@@ -57,7 +69,11 @@ export const ChatItem: FC<Chat> = observer(
             </div>
             <div>
               <Typography.Text style={{ color: "#A7ADB4" }}>
-                {lastMessage ?? "Нет сообщений"}
+                {lastMessage
+                  ? lastMessage
+                  : store.messageList.length
+                  ? "Сообщение удалено"
+                  : "Нет сообщений"}
               </Typography.Text>
             </div>
           </div>

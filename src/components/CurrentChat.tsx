@@ -36,14 +36,20 @@ export const CurrentChat: FC = observer(() => {
       {store.repliedMessage !== null && (
         <ReplyMessageModal
           isOpen={isReplyModalOpen}
-          onClose={() => setIsReplyModalOpen(false)}
+          onClose={() => {
+            setIsReplyModalOpen(false);
+            store.unsetRepliedMessage();
+          }}
           onReply={onReplyMsg}
           repliedMessage={store.repliedMessage}
         />
       )}
       {store.commentedMessage !== null && (
         <MessageCommentsModal
-          onClose={() => setIsCommentModalOpen(false)}
+          onClose={() => {
+            setIsCommentModalOpen(false);
+            store.unsetCommentedMessage();
+          }}
           isOpen={isCommentModalOpen}
           commentedMessage={store.commentedMessage}
           onSetRepliedMsg={onSetRepliedMsg}
@@ -54,6 +60,7 @@ export const CurrentChat: FC = observer(() => {
         onSetRepliedMsg={onSetRepliedMsg}
         onOpenComments={onOpenComments}
         messages={store.messageList}
+        isLoading={store.isMessageListLoading}
       />
       {/* <div
         style={{

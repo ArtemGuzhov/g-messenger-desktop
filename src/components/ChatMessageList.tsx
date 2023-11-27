@@ -16,17 +16,21 @@ export const ChatMessageList: FC<{
   differenceHeight: number;
   height?: number;
   isMaxHeight?: boolean;
+  messages: Message[];
+  isLoading: boolean;
+  isComments?: boolean;
   onOpenComments?: (msgId: string) => void;
   onSetRepliedMsg: (msgId: string) => void;
-  messages: Message[];
 }> = observer(
   ({
     differenceHeight,
-    onSetRepliedMsg,
     height,
     isMaxHeight,
-    onOpenComments,
     messages,
+    isLoading,
+    isComments,
+    onSetRepliedMsg,
+    onOpenComments,
   }) => {
     const store = useContext(StoreContext);
 
@@ -34,9 +38,13 @@ export const ChatMessageList: FC<{
       store.resentMessage(msgId);
     };
 
+    const onRemove = (msgId: string) => {
+      store.removeMessage(msgId);
+    };
+
     useEffect(() => {
       store.getChatMessages();
-    }, [store.selectedChat]);
+    }, [store.selectedChat.id]);
 
     return (
       <div
@@ -51,7 +59,7 @@ export const ChatMessageList: FC<{
           paddingTop: "20px",
         }}
       >
-        {store.isChatListLoading ? (
+        {isLoading ? (
           <div
             style={{
               width: "100%",
@@ -70,45 +78,53 @@ export const ChatMessageList: FC<{
             const nextDate = nextMsg
               ? new Date(nextMsg.createdAt).getDate()
               : null;
+            const isMy = message.userId === store.profile?.id;
+            const isDeleted = !!message.deletedAt;
 
             if (message.repliedToId !== null) {
               return (
-                <>
+                <div key={`reply-message-item-${message.id}`}>
+                  {((nextDate && nextDate !== date) ||
+                    index + 1 === msgList.length) &&
+                    !isComments && (
+                      <MessageDateDivider
+                        text={getDividerTime(message.createdAt)}
+                      />
+                    )}
                   <ReplyMessage
-                    key={message.id}
-                    isOnlyMsg={nextMsg?.simpleUser?.id === store.profile.id}
+                    isOnlyMsg={nextMsg?.simpleUser?.id === store.profile?.id}
+                    message={message}
+                    isMy={isMy}
+                    isDeleted={isDeleted}
                     onReply={onSetRepliedMsg}
                     onOpenComments={onOpenComments}
-                    message={message}
                     resentMessage={onResent}
+                    onRemove={onRemove}
                   />
-                  {((nextDate && nextDate !== date) ||
-                    index + 1 === msgList.length) && (
-                    <MessageDateDivider
-                      text={getDividerTime(message.createdAt)}
-                    />
-                  )}
-                </>
+                </div>
               );
             }
 
             return (
-              <>
+              <div key={`default-message-item-${message.id}`}>
+                {((nextDate && nextDate !== date) ||
+                  index + 1 === msgList.length) &&
+                  !isComments && (
+                    <MessageDateDivider
+                      text={getDividerTime(message.createdAt)}
+                    />
+                  )}
                 <DefaultMessage
-                  key={message.id}
-                  isOnlyMsg={nextMsg?.simpleUser?.id === store.profile.id}
+                  isOnlyMsg={nextMsg?.simpleUser?.id === store.profile?.id}
+                  message={message}
+                  isMy={isMy}
+                  isDeleted={isDeleted}
                   onReply={onSetRepliedMsg}
                   onOpenComments={onOpenComments}
-                  message={message}
                   resentMessage={onResent}
+                  onRemove={onRemove}
                 />
-                {((nextDate && nextDate !== date) ||
-                  index + 1 === msgList.length) && (
-                  <MessageDateDivider
-                    text={getDividerTime(message.createdAt)}
-                  />
-                )}
-              </>
+              </div>
             );
           })
         )}

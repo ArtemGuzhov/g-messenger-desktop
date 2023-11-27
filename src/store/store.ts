@@ -35,6 +35,7 @@ class Store {
   isChatListLoading = false;
 
   isMessageListLoading = true;
+  isMessageCommentsLoading = false;
   messageList: Message[] = [];
   commentedMessage: Message | null = null;
   repliedMessage: Message | null = null;
@@ -45,6 +46,7 @@ class Store {
 
   notifications: { id: string; title: string; message: string }[] = [];
   errors: { id: string; message: string }[] = [];
+  files: { id: string; image: string }[] = [];
 
   constructor() {
     makeAutoObservable(this, {}, { deep: true });
@@ -80,24 +82,46 @@ class Store {
         clientId: string;
         message: Message;
       }) => {
-        const messageIndex = this.messageList.findIndex(
-          (msg) =>
-            msg.id === payload.clientId &&
-            msg.chatId === payload.chatId &&
-            msg.status === MessageStatus.PENDING
-        );
+        if (!payload.message.rootId) {
+          const messageIndex = this.messageList.findIndex(
+            (msg) =>
+              msg.id === payload.clientId &&
+              msg.chatId === payload.chatId &&
+              msg.status === MessageStatus.PENDING
+          );
 
-        this.messageList = this.messageList.map((msg, index) => {
-          if (index === messageIndex) {
-            return {
-              ...payload.message,
-              status: MessageStatus.SENT,
-              repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
-            };
-          }
+          this.messageList = this.messageList.map((msg, index) => {
+            if (index === messageIndex) {
+              return {
+                ...payload.message,
+                status: MessageStatus.OK,
+                repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
+              };
+            }
 
-          return msg;
-        });
+            return msg;
+          });
+          this.updateChatPosition(payload.chatId);
+        } else {
+          const commentIndex = this.commentList.findIndex(
+            (msg) =>
+              msg.id === payload.clientId &&
+              msg.chatId === payload.chatId &&
+              msg.status === MessageStatus.PENDING
+          );
+
+          this.commentList = this.commentList.map((msg, index) => {
+            if (index === commentIndex) {
+              return {
+                ...payload.message,
+                status: MessageStatus.OK,
+                repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
+              };
+            }
+
+            return msg;
+          });
+        }
       }
     );
 
@@ -128,6 +152,46 @@ class Store {
         this.selectedChat = chat;
       }
     });
+
+    $socket.on(
+      ChatEvent.DELETED_MESSAGE,
+      (payload: { id: string; chatId: string; isComment: boolean }) => {
+        if (payload.isComment) {
+          this.commentList = this.commentList.map((msg) => {
+            if (msg.id === payload.id) {
+              return {
+                ...msg,
+                status: MessageStatus.OK,
+                deletedAt: new Date().toISOString(),
+              };
+            }
+
+            return msg;
+          });
+          return;
+        }
+
+        this.messageList = this.messageList.map((msg) => {
+          if (msg.id === payload.id) {
+            return {
+              ...msg,
+              status: MessageStatus.OK,
+              deletedAt: new Date().toISOString(),
+            };
+          }
+
+          return msg;
+        });
+
+        this.chatList = this.chatList.map((chat) => {
+          if (chat.id === payload.chatId) {
+            return { ...chat, lastMessage: "Сообщение удалено" };
+          }
+
+          return chat;
+        });
+      }
+    );
   }
 
   async init() {
@@ -154,6 +218,10 @@ class Store {
 
   removeNotification(id: string) {
     this.notifications = this.notifications.filter((n) => n.id !== id);
+  }
+
+  setFile(id: string, image: string) {
+    this.files = [...this.files, { id, image }];
   }
 
   /**
@@ -330,21 +398,19 @@ class Store {
         chatList.push({ ...chat, isFavorite });
       }
 
-      runInAction(() => {
-        this.chatList = chatList;
-        this.favoriteChatList = favoriteChatList;
+      this.chatList = chatList;
+      this.favoriteChatList = favoriteChatList;
 
-        if (isInit && chats.length) {
-          if (chatList.length) {
-            this.selectedChat = chatList[0];
-            return;
-          }
-
-          if (favoriteChatList.length) {
-            this.selectedChat = favoriteChatList[0];
-          }
+      if (isInit && chats.length) {
+        if (chatList.length) {
+          this.selectedChat = chatList[0];
+          return;
         }
-      });
+
+        if (favoriteChatList.length) {
+          this.selectedChat = favoriteChatList[0];
+        }
+      }
     } catch (error) {
       this.errors.push({
         id: v4(),
@@ -438,11 +504,17 @@ class Store {
   }
 
   async setRepliedMessage(messageId: string) {
-    const message = this.messageList.find(({ id }) => id === messageId);
+    const message =
+      this.messageList.find(({ id }) => id === messageId) ??
+      this.commentList.find(({ id }) => id === messageId);
 
     if (message) {
       this.repliedMessage = message;
     }
+  }
+
+  async unsetRepliedMessage() {
+    this.repliedMessage = null;
   }
 
   async setCommentedMessage(messageId: string) {
@@ -451,6 +523,10 @@ class Store {
     if (message) {
       this.commentedMessage = message;
     }
+  }
+
+  async unsetCommentedMessage() {
+    this.commentedMessage = null;
   }
 
   async resentMessage(messageId: string) {
@@ -482,51 +558,204 @@ class Store {
       chatId,
       clientId,
       repliedToId: this.repliedMessage?.id ?? null,
+      rootId: this.commentedMessage?.id ?? null,
     });
 
-    this.messageList = [
-      {
-        id: clientId,
-        chatId: chatId,
-        userId: this.myId,
-        simpleUser: {
-          name: this.profile.name,
-          avatar: this.profile.avatar,
-          id: this.myId,
-          label: this.profile.label,
+    if (this.commentedMessage === null) {
+      this.messageList = [
+        {
+          id: clientId,
+          chatId: chatId,
+          userId: this.myId,
+          simpleUser: {
+            name: this.profile.name,
+            avatar: this.profile.avatar,
+            id: this.myId,
+            label: this.profile.label,
+          },
+          type: MessageType.DEFAULT,
+          status: MessageStatus.PENDING,
+          text: paylod.text,
+          commentsCount: 0,
+          createdAt: new Date().toISOString(),
+          deletedAt: null,
+          files: [],
+          isUpdated: false,
+          readersIds: [],
+          repliedTo: this.repliedMessage,
+          repliedToId: this.repliedMessage?.id ?? null,
+          rootId: null,
         },
-        type: MessageType.DEFAULT,
-        status: MessageStatus.PENDING,
-        text: paylod.text,
-        commentsCount: 0,
-        createdAt: new Date().toISOString(),
-        deletedAt: null,
-        files: [],
-        isUpdated: false,
-        readersIds: [],
-        repliedTo: this.repliedMessage,
-        repliedToId: this.repliedMessage?.id ?? null,
-      },
-      ...this.messageList,
-    ];
+        ...this.messageList,
+      ];
 
-    this.chatList = this.chatList.map((chat) => {
-      if (chat.id === chatId) {
-        return { ...chat, lastMessage: paylod.text };
-      }
+      this.chatList = this.chatList.map((chat) => {
+        if (chat.id === chatId) {
+          return { ...chat, lastMessage: paylod.text };
+        }
 
-      return chat;
-    });
+        return chat;
+      });
 
-    this.favoriteChatList = this.favoriteChatList.map((chat) => {
-      if (chat.id === chatId) {
-        return { ...chat, lastMessage: paylod.text };
-      }
+      this.favoriteChatList = this.favoriteChatList.map((chat) => {
+        if (chat.id === chatId) {
+          return { ...chat, lastMessage: paylod.text };
+        }
 
-      return chat;
-    });
+        return chat;
+      });
+    } else {
+      this.commentList = [
+        {
+          id: clientId,
+          chatId: chatId,
+          userId: this.myId,
+          simpleUser: {
+            name: this.profile.name,
+            avatar: this.profile.avatar,
+            id: this.myId,
+            label: this.profile.label,
+          },
+          type: MessageType.DEFAULT,
+          status: MessageStatus.PENDING,
+          text: paylod.text,
+          commentsCount: 0,
+          createdAt: new Date().toISOString(),
+          deletedAt: null,
+          files: [],
+          isUpdated: false,
+          readersIds: [],
+          repliedTo: this.repliedMessage,
+          repliedToId: this.repliedMessage?.id ?? null,
+          rootId: this.commentedMessage.id,
+        },
+        ...this.commentList,
+      ];
+
+      this.messageList = this.messageList.map((msg) => {
+        if (msg.id === this.commentedMessage.id) {
+          return { ...msg, commentsCount: msg.commentsCount + 1 };
+        }
+
+        return msg;
+      });
+
+      this.commentedMessage = {
+        ...this.commentedMessage,
+        commentsCount: this.commentedMessage.commentsCount + 1,
+      };
+    }
 
     this.repliedMessage = null;
+
+    setTimeout(() => {
+      if (this.commentedMessage === null) {
+        const message = this.messageList.find(({ id }) => id === clientId);
+        if (message && message.status === MessageStatus.PENDING) {
+          this.messageList = this.messageList.map((msg) => {
+            if (msg.id === message.id) {
+              return { ...msg, status: MessageStatus.ERROR };
+            }
+
+            return msg;
+          });
+        }
+      } else {
+        const comment = this.commentList.find(({ id }) => id === clientId);
+        if (comment && comment.status === MessageStatus.PENDING) {
+          this.commentList = this.commentList.map((msg) => {
+            if (msg.id === comment.id) {
+              return { ...msg, status: MessageStatus.ERROR };
+            }
+
+            return msg;
+          });
+        }
+      }
+    }, 5_000);
+  }
+
+  async getMessageComments() {
+    try {
+      this.isMessageCommentsLoading = true;
+      const comments = await ChatService.getMessageComments(
+        this.commentedMessage.id
+      );
+      this.commentList = comments;
+    } catch {
+      this.errors.push({
+        id: v4(),
+        message: "Ошибка получения комментариев",
+      });
+    } finally {
+      this.isMessageCommentsLoading = false;
+    }
+  }
+
+  async removeMessage(messageId: string) {
+    const isComment = !!this.commentedMessage;
+
+    $socket.emit(ChatEvent.DELETE_MESSAGE, {
+      id: messageId,
+      chatId: this.selectedChat.id,
+      isComment,
+    }, {
+      
+    });
+
+    if (isComment) {
+      this.commentList = this.commentList.map((msg) => {
+        if (msg.id === messageId) {
+          return { ...msg, status: MessageStatus.PENDING };
+        }
+
+        return msg;
+      });
+      return;
+    }
+
+    this.messageList = this.messageList.map((msg) => {
+      if (msg.id === messageId) {
+        return { ...msg, status: MessageStatus.PENDING };
+      }
+
+      return msg;
+    });
+
+    setTimeout(() => {
+      if (!isComment) {
+        const message = this.messageList.find(({ id }) => id === messageId);
+        if (message && message.status === MessageStatus.PENDING) {
+          this.messageList = this.messageList.map((msg) => {
+            if (msg.id === message.id) {
+              return { ...msg, status: MessageStatus.ERROR };
+            }
+
+            return msg;
+          });
+        }
+      } else {
+        const comment = this.commentList.find(({ id }) => id === messageId);
+        if (comment && comment.status === MessageStatus.PENDING) {
+          this.commentList = this.commentList.map((msg) => {
+            if (msg.id === comment.id) {
+              return { ...msg, status: MessageStatus.ERROR };
+            }
+
+            return msg;
+          });
+        }
+      }
+    }, 5_000);
+  }
+
+  private updateChatPosition(chatId: string) {
+    const chat = this.chatList.find((chat) => chat.id === chatId);
+
+    if (chat) {
+      this.chatList = this.chatList.filter((chat) => chat.id !== chatId);
+      this.chatList = [chat, ...this.chatList];
+    }
   }
 }
 

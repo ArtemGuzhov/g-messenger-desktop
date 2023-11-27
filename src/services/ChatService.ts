@@ -11,4 +11,11 @@ export class ChatService {
     const { data: response } = await $api.get(`/api/v1/messages/${chatId}`);
     return response.data;
   }
+
+  static async getMessageComments(messageId: string): Promise<Message[]> {
+    const { data: response } = await $api.get(
+      `/api/v1/messages/comments/${messageId}`
+    );
+    return response.data;
+  }
 }

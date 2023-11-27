@@ -29,7 +29,7 @@ export const ChatSider: FC = observer(() => {
 
   useEffect(() => {
     if (isUpdate) {
-      store.getUserChats();
+      store.getUserChats(false);
     }
   }, [isUpdate]);
 
