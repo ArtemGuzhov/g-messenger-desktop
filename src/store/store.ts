@@ -1,4 +1,4 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable } from "mobx";
 import { v4 } from "uuid";
 import { AuthService } from "../services/AuthService";
 import { createContext } from "react";
@@ -10,6 +10,7 @@ import {
   CreateChatPayload,
   CreateMessagePayload,
   Message,
+  MessageInviteStatus,
   MessageStatus,
   MessageType,
   User,
@@ -41,6 +42,8 @@ class Store {
   favoriteChatIds: string[] = [];
   selectedChat: Chat | null = null;
   isChatListLoading = false;
+  chatUserList: User[] = [];
+  isChatUserListLoading = false;
 
   isMessageListLoading = true;
   isMessageCommentsLoading = false;
@@ -56,8 +59,22 @@ class Store {
   errors: { id: string; message: string }[] = [];
   files: { id: string; image: string }[] = [];
 
+  userInvitedId: string | null = null;
+
   constructor() {
     makeAutoObservable(this, {}, { deep: true });
+  }
+
+  setupSocket() {
+    this.$socket = io(SOCKET_URL, {
+      extraHeaders: {
+        Authorization: localStorage.getItem("accessToken"),
+      },
+    });
+  }
+
+  connect() {
+    this.$socket.connect();
 
     this.$socket.on(ChatEvent.CREATED_CHAT, (chat: Chat) => {
       if (chat.type === ChatType.DIALOG) {
@@ -91,44 +108,91 @@ class Store {
         message: Message;
       }) => {
         if (!payload.message.rootId) {
-          const messageIndex = this.messageList.findIndex(
-            (msg) =>
-              msg.id === payload.clientId &&
-              msg.chatId === payload.chatId &&
-              msg.status === MessageStatus.PENDING
-          );
-
-          this.messageList = this.messageList.map((msg, index) => {
-            if (index === messageIndex) {
-              return {
-                ...payload.message,
-                status: MessageStatus.OK,
-                repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
-              };
+          if (payload.message.userId !== this.myId) {
+            if (this.selectedChat?.id === payload.chatId) {
+              this.messageList = [payload.message, ...this.messageList];
             }
 
-            return msg;
-          });
+            this.chatList = this.chatList.map((chat) => {
+              if (chat.id === payload.chatId) {
+                return { ...chat, lastMessage: payload.message.text };
+              }
+              return chat;
+            });
+          } else {
+            if (payload.message.inviteChat) {
+              this.chatList = this.chatList.map((chat) => {
+                if (chat.id === payload.chatId) {
+                  return { ...chat, lastMessage: payload.message.text };
+                }
+                return chat;
+              });
+            } else {
+              const messageIndex = this.messageList.findIndex(
+                (msg) =>
+                  msg.id === payload.clientId &&
+                  msg.chatId === payload.chatId &&
+                  msg.status === MessageStatus.PENDING
+              );
+
+              this.messageList = this.messageList.map((msg, index) => {
+                if (index === messageIndex) {
+                  return {
+                    ...payload.message,
+                    status: MessageStatus.OK,
+                    repliedTo: {
+                      ...payload.message.repliedTo,
+                      ...msg.repliedTo,
+                    },
+                  };
+                }
+
+                return msg;
+              });
+            }
+          }
           this.updateChatPosition(payload.chatId);
         } else {
-          const commentIndex = this.commentList.findIndex(
-            (msg) =>
-              msg.id === payload.clientId &&
-              msg.chatId === payload.chatId &&
-              msg.status === MessageStatus.PENDING
-          );
+          if (
+            payload.message.userId !== this.myId &&
+            this.selectedChat?.id === payload.chatId
+          ) {
+            this.commentList = [payload.message, ...this.commentList];
+            this.messageList = this.messageList.map((msg) => {
+              if (msg.id === payload.message.rootId) {
+                return { ...msg, commentsCount: msg.commentsCount + 1 };
+              }
+              return msg;
+            });
 
-          this.commentList = this.commentList.map((msg, index) => {
-            if (index === commentIndex) {
-              return {
-                ...payload.message,
-                status: MessageStatus.OK,
-                repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
+            if (this.commentedMessage?.id === payload.message.rootId) {
+              this.commentedMessage = {
+                ...this.commentedMessage,
+                commentsCount: this.commentedMessage.commentsCount + 1,
               };
             }
 
-            return msg;
-          });
+            return;
+          } else {
+            const commentIndex = this.commentList.findIndex(
+              (msg) =>
+                msg.id === payload.clientId &&
+                msg.chatId === payload.chatId &&
+                msg.status === MessageStatus.PENDING
+            );
+
+            this.commentList = this.commentList.map((msg, index) => {
+              if (index === commentIndex) {
+                return {
+                  ...payload.message,
+                  status: MessageStatus.OK,
+                  repliedTo: { ...payload.message.repliedTo, ...msg.repliedTo },
+                };
+              }
+
+              return msg;
+            });
+          }
         }
       }
     );
@@ -200,28 +264,108 @@ class Store {
         });
       }
     );
-  }
 
-  setupSocket() {
-    this.$socket = io(SOCKET_URL, {
-      extraHeaders: {
-        Authorization: localStorage.getItem("accessToken"),
-      },
-      autoConnect: false,
+    this.$socket.on(ChatEvent.INVITE_ERROR, (payload: { clientId: string }) => {
+      if (this.userInvitedId === payload.clientId) {
+        this.userInvitedId = null;
+        this.errors = [
+          ...this.errors,
+          {
+            id: v4(),
+            message: "Ошибка при приглашении пользователя",
+          },
+        ];
+      }
     });
-  }
 
-  connect() {
-    this.$socket.connect();
+    this.$socket.on(
+      ChatEvent.INVITE_SENT,
+      (payload: { clientId: string; profile: User }) => {
+        if (this.userInvitedId === payload.clientId) {
+          this.userInvitedId = null;
+          this.chatUserList = [...this.chatUserList, payload.profile];
+        }
+      }
+    );
+
+    this.$socket.on(
+      ChatEvent.ACCEPT_INVITE,
+      (payload: {
+        chatId: string;
+        messageId?: string;
+        simpleUser?: User;
+        userId?: string;
+        chat?: Chat;
+      }) => {
+        if (payload.simpleUser) {
+          if (this.selectedChat?.id === payload.chatId) {
+            this.selectedChat = {
+              ...this.selectedChat,
+              usersCount: this.selectedChat.usersCount + 1,
+            };
+
+            this.chatUserList = [...this.chatUserList, payload.simpleUser];
+          }
+
+          this.chatList = this.chatList.map((chat) => {
+            if (chat.id === payload.chatId) {
+              return {
+                ...chat,
+                usersCount: this.selectedChat.usersCount + 1,
+              };
+            }
+
+            return chat;
+          });
+          return;
+        }
+
+        if (payload.messageId && payload.chat) {
+          if (this.selectedChat?.id === payload.chatId) {
+            this.messageList = this.messageList.map((msg) => {
+              if (msg.id === payload.messageId) {
+                return { ...msg, inviteStatus: MessageInviteStatus.ACCEPTED };
+              }
+            });
+          }
+
+          if (payload.userId === this.myId) {
+            this.chatList = [payload.chat, ...this.chatList];
+          }
+        }
+      }
+    );
+
+    this.$socket.on(
+      ChatEvent.REJECT_INVITE,
+      (payload: { chatId: string; messageId: string; userId?: string }) => {
+        if (payload.userId) {
+          if (this.selectedChat?.id === payload.chatId) {
+            this.chatUserList = this.chatUserList.filter(
+              (user) => user.id !== payload.userId
+            );
+          }
+
+          return;
+        }
+
+        if (this.selectedChat?.id === payload.chatId) {
+          this.messageList = this.messageList.map((msg) => {
+            if (msg.id === payload.messageId) {
+              return { ...msg, inviteStatus: MessageInviteStatus.REJECTED };
+            }
+
+            return msg;
+          });
+        }
+      }
+    );
   }
 
   async init() {
     try {
       this.isInitLoading = true;
       await this.getProfile();
-      await new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-      });
     } catch {
       /* empty */
     } finally {
@@ -255,10 +399,13 @@ class Store {
       await AuthService.login(payload);
       this.isAuth = true;
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка при авторизации",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка при авторизации",
+        },
+      ];
     } finally {
       this.isAuthLoading = false;
     }
@@ -270,10 +417,13 @@ class Store {
       await AuthService.validateToken();
       this.isAuth = true;
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка при авторизации",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка при авторизации",
+        },
+      ];
     } finally {
       this.isAuthLoading = false;
     }
@@ -286,13 +436,20 @@ class Store {
       this.$socket.disconnect();
       this.isAuth = false;
       this.profile = null;
+      this.selectedChat = null;
+      this.messageList = [];
+      this.repliedMessage = null;
+      this.commentedMessage = null;
       localStorage.setItem("accessToken", null);
       localStorage.setItem("refreshToken", null);
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка при выходе",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка при выходе",
+        },
+      ];
     } finally {
       this.isAuthLoading = false;
     }
@@ -310,10 +467,13 @@ class Store {
       this.favoriteChatIds = user.favoriteChatIds;
       this.myId = user.id;
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка получения профиля",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка получения профиля",
+        },
+      ];
       this.isAuth = false;
     } finally {
       this.isProfileLoading = false;
@@ -326,10 +486,13 @@ class Store {
       const users = await UserService.getTeam();
       this.userList = users;
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка получения пользователей",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка получения пользователей",
+        },
+      ];
     } finally {
       this.isUserListLoading = false;
     }
@@ -362,26 +525,27 @@ class Store {
         );
         this.chatList = [...this.chatList, { ...chat, isFavorite: false }];
         this.selectedChat = { ...this.selectedChat, isFavorite: false };
-
+        await this.getUserChats();
         return;
       }
 
       const chat = this.chatList.find((chat) => chat.id === chatId);
 
-      runInAction(() => {
-        this.favoriteChatIds = [...this.favoriteChatIds, chatId];
-        this.chatList = this.chatList.filter((chat) => chat.id !== chatId);
-        this.favoriteChatList = [
-          ...this.favoriteChatList,
-          { ...chat, isFavorite: true },
-        ];
-        this.selectedChat = { ...this.selectedChat, isFavorite: true };
-      });
+      this.favoriteChatIds = [...this.favoriteChatIds, chatId];
+      this.chatList = this.chatList.filter((chat) => chat.id !== chatId);
+      this.favoriteChatList = [
+        ...this.favoriteChatList,
+        { ...chat, isFavorite: true },
+      ];
+      this.selectedChat = { ...this.selectedChat, isFavorite: true };
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка изменения чата",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка изменения чата",
+        },
+      ];
     }
   }
 
@@ -389,55 +553,83 @@ class Store {
    * Chats
    */
 
+  async getChatUsers() {
+    try {
+      this.isChatUserListLoading = true;
+
+      const users = await ChatService.getChatUsers(this.selectedChat?.id);
+      this.chatUserList = users;
+    } catch (error) {
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка получения пользователей чата",
+        },
+      ];
+    } finally {
+      this.isChatUserListLoading = false;
+    }
+  }
+
   async getUserChats(isInit?: boolean) {
     try {
       this.isChatListLoading = true;
       const chats = await ChatService.getChats();
 
-      const favoriteChatList: Chat[] = [];
-      const chatList: Chat[] = [];
+      if (this.profile) {
+        const favoriteChatList: Chat[] = [];
+        const chatList: Chat[] = [];
 
-      for (let chat of chats) {
-        const isFavorite = !!this.favoriteChatIds.includes(chat.id);
+        for (let chat of chats) {
+          const isFavorite = !!this.favoriteChatIds.includes(chat.id);
 
-        if (chat.type === ChatType.DIALOG) {
-          const profile = chat.users.filter((user) => user.id !== this.myId)[0];
+          if (chat.type === ChatType.DIALOG) {
+            const profile = chat.users.filter(
+              (user) => user.id !== this.myId
+            )[0];
 
-          chat = {
-            ...chat,
-            avatar: profile.avatar ?? null,
-            name: profile.name ?? null,
-            label: profile.label,
-          };
-        } else {
-          chat = { ...chat, label: `${chat.usersCount}` };
+            chat = {
+              ...chat,
+              avatar: profile.avatar ?? null,
+              name: profile.name ?? null,
+              label: profile.label,
+            };
+          } else {
+            chat = { ...chat, label: `${chat.usersCount}` };
+          }
+
+          if (isFavorite) {
+            favoriteChatList.push({ ...chat, isFavorite });
+            continue;
+          }
+          chatList.push({ ...chat, isFavorite });
         }
 
-        if (isFavorite) {
-          favoriteChatList.push({ ...chat, isFavorite });
-          continue;
-        }
-        chatList.push({ ...chat, isFavorite });
-      }
+        this.chatList = chatList;
+        this.favoriteChatList = favoriteChatList;
 
-      this.chatList = chatList;
-      this.favoriteChatList = favoriteChatList;
+        if (isInit && chats.length) {
+          if (chatList.length) {
+            this.selectedChat = chatList[0];
+            return;
+          }
 
-      if (isInit && chats.length) {
-        if (chatList.length) {
-          this.selectedChat = chatList[0];
-          return;
-        }
-
-        if (favoriteChatList.length) {
-          this.selectedChat = favoriteChatList[0];
+          if (favoriteChatList.length) {
+            this.selectedChat = favoriteChatList[0];
+          }
         }
       }
     } catch (error) {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка получения чатов",
-      });
+      if (!isInit) {
+        this.errors = [
+          ...this.errors,
+          {
+            id: v4(),
+            message: "Ошибка получения чатов",
+          },
+        ];
+      }
     } finally {
       this.isChatListLoading = false;
     }
@@ -516,10 +708,13 @@ class Store {
       const messages = await ChatService.getChatMessages(this.selectedChat.id);
       this.messageList = messages;
     } catch {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка получения сообщений",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка получения сообщений",
+        },
+      ];
     } finally {
       this.isMessageListLoading = false;
     }
@@ -571,12 +766,12 @@ class Store {
     }
   }
 
-  async createMessage(paylod: CreateMessagePayload) {
+  async createMessage(payload: CreateMessagePayload) {
     const chatId = this.selectedChat.id;
     const clientId = v4();
 
     this.$socket.emit(ChatEvent.CREATE_MESSAGE, {
-      ...paylod,
+      ...payload,
       chatId,
       clientId,
       repliedToId: this.repliedMessage?.id ?? null,
@@ -597,7 +792,7 @@ class Store {
           },
           type: MessageType.DEFAULT,
           status: MessageStatus.PENDING,
-          text: paylod.text,
+          text: payload.text,
           commentsCount: 0,
           createdAt: new Date().toISOString(),
           deletedAt: null,
@@ -607,13 +802,16 @@ class Store {
           repliedTo: this.repliedMessage,
           repliedToId: this.repliedMessage?.id ?? null,
           rootId: null,
+          inviteChat: null,
+          inviteChatId: null,
+          inviteStatus: null,
         },
         ...this.messageList,
       ];
 
       this.chatList = this.chatList.map((chat) => {
         if (chat.id === chatId) {
-          return { ...chat, lastMessage: paylod.text };
+          return { ...chat, lastMessage: payload.text };
         }
 
         return chat;
@@ -621,7 +819,7 @@ class Store {
 
       this.favoriteChatList = this.favoriteChatList.map((chat) => {
         if (chat.id === chatId) {
-          return { ...chat, lastMessage: paylod.text };
+          return { ...chat, lastMessage: payload.text };
         }
 
         return chat;
@@ -640,7 +838,7 @@ class Store {
           },
           type: MessageType.DEFAULT,
           status: MessageStatus.PENDING,
-          text: paylod.text,
+          text: payload.text,
           commentsCount: 0,
           createdAt: new Date().toISOString(),
           deletedAt: null,
@@ -650,6 +848,9 @@ class Store {
           repliedTo: this.repliedMessage,
           repliedToId: this.repliedMessage?.id ?? null,
           rootId: this.commentedMessage.id,
+          inviteChat: null,
+          inviteChatId: null,
+          inviteStatus: null,
         },
         ...this.commentList,
       ];
@@ -705,10 +906,13 @@ class Store {
       );
       this.commentList = comments;
     } catch {
-      this.errors.push({
-        id: v4(),
-        message: "Ошибка получения комментариев",
-      });
+      this.errors = [
+        ...this.errors,
+        {
+          id: v4(),
+          message: "Ошибка получения комментариев",
+        },
+      ];
     } finally {
       this.isMessageCommentsLoading = false;
     }
@@ -717,15 +921,11 @@ class Store {
   async removeMessage(messageId: string) {
     const isComment = !!this.commentedMessage;
 
-    this.$socket.emit(
-      ChatEvent.DELETE_MESSAGE,
-      {
-        id: messageId,
-        chatId: this.selectedChat.id,
-        isComment,
-      },
-      {}
-    );
+    this.$socket.emit(ChatEvent.DELETE_MESSAGE, {
+      id: messageId,
+      chatId: this.selectedChat.id,
+      isComment,
+    });
 
     if (isComment) {
       this.commentList = this.commentList.map((msg) => {
@@ -771,6 +971,29 @@ class Store {
         }
       }
     }, 5_000);
+  }
+
+  async inviteUser(profileId: string, inviteChatId: string) {
+    const clientId = v4();
+
+    this.$socket.emit(ChatEvent.INVITE_USER, {
+      profileId,
+      inviteChatId,
+      clientId,
+    });
+
+    this.userInvitedId = clientId;
+  }
+
+  async answerOnInvite(payload: {
+    inviteChatId: string;
+    inviteStatus: MessageInviteStatus;
+    messageId: string;
+  }) {
+    this.$socket.emit(ChatEvent.ANSWER_ON_INVITE, {
+      ...payload,
+      chatId: this.selectedChat.id,
+    });
   }
 
   private updateChatPosition(chatId: string) {

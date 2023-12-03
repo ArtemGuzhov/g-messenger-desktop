@@ -8,9 +8,14 @@ import { observer } from "mobx-react-lite";
 import { Spin } from "antd";
 import { ReplyMessage } from "./ReplyMessage";
 import { DefaultMessage } from "./DefaultMessage";
-import { Message } from "../store/store-additional";
+import {
+  Message,
+  MessageInviteStatus,
+  MessageType,
+} from "../store/store-additional";
 import { MessageDateDivider } from "./MessageDateDivider";
 import { getDividerTime } from "../helpers";
+import { InviteMessage } from "./InviteMessage";
 
 export const ChatMessageList: FC<{
   differenceHeight: number;
@@ -40,6 +45,14 @@ export const ChatMessageList: FC<{
 
     const onRemove = (msgId: string) => {
       store.removeMessage(msgId);
+    };
+
+    const onAnswerOnInvite = (payload: {
+      messageId: string;
+      inviteStatus: MessageInviteStatus;
+      inviteChatId: string;
+    }) => {
+      store.answerOnInvite(payload);
     };
 
     useEffect(() => {
@@ -81,6 +94,27 @@ export const ChatMessageList: FC<{
             const isMy = message.userId === store.profile?.id;
             const isDeleted = !!message.deletedAt;
 
+            if (message.type === MessageType.INVITE) {
+              return (
+                <div key={`invite-message-item-${message.id}`}>
+                  {((nextDate && nextDate !== date) ||
+                    index + 1 === msgList.length) &&
+                    !isComments && (
+                      <MessageDateDivider
+                        text={getDividerTime(message.createdAt)}
+                      />
+                    )}
+                  <InviteMessage
+                    key={message.id}
+                    message={message}
+                    isMy={isMy}
+                    onAnswerOnInvite={onAnswerOnInvite}
+                    onOpenChat={(chatId: string) => store.setChat(chatId)}
+                  />
+                </div>
+              );
+            }
+
             if (message.repliedToId !== null) {
               return (
                 <div key={`reply-message-item-${message.id}`}>
@@ -92,7 +126,6 @@ export const ChatMessageList: FC<{
                       />
                     )}
                   <ReplyMessage
-                    isOnlyMsg={nextMsg?.simpleUser?.id === store.profile?.id}
                     message={message}
                     isMy={isMy}
                     isDeleted={isDeleted}
@@ -115,7 +148,6 @@ export const ChatMessageList: FC<{
                     />
                   )}
                 <DefaultMessage
-                  isOnlyMsg={nextMsg?.simpleUser?.id === store.profile?.id}
                   message={message}
                   isMy={isMy}
                   isDeleted={isDeleted}

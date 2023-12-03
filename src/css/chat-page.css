@@ -33,3 +33,13 @@
 .message-item:hover {
   background-color: #f1f1f1 !important;
 }
+
+.chat-item-msg {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  line-height: 1.3em !important;
+  height: 3.9em !important;
+}

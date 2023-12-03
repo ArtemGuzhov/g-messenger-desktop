@@ -12,6 +12,7 @@ import { observer } from "mobx-react-lite";
 import { Message, MessageStatus } from "../store/store-additional";
 import { getCommentsCountLabel, getMessageTime } from "../helpers";
 import { AvatarWithImage } from "./AvatarWithImage";
+import { MessageImage } from "./MessageImage";
 
 export const ReplyMessage: FC<{
   isOnlyMsg?: boolean;
@@ -31,7 +32,7 @@ export const ReplyMessage: FC<{
     resentMessage,
     onReply,
     onOpenComments,
-    onRemove
+    onRemove,
   }) => {
     const [isFocus, setIsFocus] = useState(false);
     const [isCopy, setIsCopy] = useState(false);
@@ -114,55 +115,85 @@ export const ReplyMessage: FC<{
                 </Typography.Text>
               </div>
             )}
-            <div
-              style={{
-                display: "flex",
-                marginTop: 10,
-                border: "1px solid #a7adb4",
-                borderTopWidth: 0,
-                borderRightWidth: 0,
-                borderBottom: 0,
-              }}
-            >
+            {!isDeleted && (
               <div
                 style={{
-                  width: "60px",
                   display: "flex",
-                  justifyContent: "center",
+                  marginTop: 10,
+                  border: "1px solid #a7adb4",
+                  borderTopWidth: 0,
+                  borderRightWidth: 0,
+                  borderBottom: 0,
                 }}
               >
-                {message?.repliedTo?.simpleUser?.avatar ? (
-                  <AvatarWithImage
-                    fileId={message.repliedTo.simpleUser.avatar.id}
-                    size="large"
-                    alt={`${message.repliedTo.simpleUser.avatar.id}`}
-                    title={message.repliedTo.simpleUser.name[0]}
-                  />
-                ) : (
-                  <Avatar size="large" />
-                )}
-              </div>
-              <div style={{ width: "100vw - 380px" }}>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <Typography.Text strong>
-                    {message.repliedTo?.simpleUser?.name ?? ""}
-                  </Typography.Text>
-                  <Typography.Text
-                    type="secondary"
-                    style={{ fontSize: 11, marginLeft: 10 }}
-                  >
-                    {getMessageTime(message.repliedTo?.createdAt ?? "")}
-                  </Typography.Text>
+                <div
+                  style={{
+                    width: "60px",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  {message?.repliedTo?.simpleUser?.avatar ? (
+                    <AvatarWithImage
+                      fileId={message.repliedTo.simpleUser.avatar.id}
+                      size="large"
+                      alt={`${message.repliedTo.simpleUser.avatar.id}`}
+                      title={message.repliedTo.simpleUser.name[0]}
+                    />
+                  ) : (
+                    <Avatar size="large" />
+                  )}
                 </div>
-                <Typography.Paragraph>
-                  {message.repliedTo?.text ?? ""}
-                </Typography.Paragraph>
+                <div style={{ width: "100vw - 380px" }}>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <Typography.Text strong>
+                      {message.repliedTo?.simpleUser?.name ?? ""}
+                    </Typography.Text>
+                    <Typography.Text
+                      type="secondary"
+                      style={{ fontSize: 11, marginLeft: 10 }}
+                    >
+                      {getMessageTime(message.repliedTo?.createdAt ?? "")}
+                    </Typography.Text>
+                  </div>
+
+                  {message.repliedTo?.deletedAt ? (
+                    <Typography.Paragraph type="secondary">
+                      {"Сообщение удалено"}
+                    </Typography.Paragraph>
+                  ) : (
+                    <Typography.Paragraph>
+                      {message.repliedTo?.text ?? ""}
+                    </Typography.Paragraph>
+                  )}
+                  {message.repliedTo.files.length ? (
+                    <div style={{ marginTop: 10, marginBottom: 20 }}>
+                      {message.repliedTo.files.map((file) => (
+                        <MessageImage
+                          fileId={file.id}
+                          width={"10vw"}
+                          key={file.id}
+                          height={"20vh"}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <></>
+                  )}
+                </div>
               </div>
-            </div>
-            <Typography.Paragraph>{message.text}</Typography.Paragraph>
+            )}
+            {isDeleted ? (
+              <Typography.Paragraph type="secondary">
+                Сообщение удалено
+              </Typography.Paragraph>
+            ) : (
+              <Typography.Paragraph>{message.text ?? ""}</Typography.Paragraph>
+            )}
           </div>
-          <div style={{ position: "absolute", right: 10, top: "-10px" }}>
+          <div style={{ position: "absolute", right: "10px", top: "-10px" }}>
             {isFocus &&
+              !isDeleted &&
               (message.status === MessageStatus.ERROR ||
               message.status === MessageStatus.PENDING ? (
                 <Button.Group>
@@ -201,20 +232,23 @@ export const ReplyMessage: FC<{
                       }}
                     />
                   </Tooltip>
-                  <Tooltip placement="topRight" title={"Удалить"}>
-                    <Popconfirm
-                      title="Удалить данное сообщение?"
-                      okText="Да"
-                      cancelText="Нет"
-                      placement="bottomLeft"
-                    >
-                      <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm>
-                  </Tooltip>
+                  {isMy && (
+                    <Tooltip placement="topRight" title={"Удалить"}>
+                      <Popconfirm
+                        title="Удалить данное сообщение?"
+                        okText="Да"
+                        cancelText="Нет"
+                        placement="bottomLeft"
+                        onPopupClick={() => onRemove(message.id)}
+                      >
+                        <Button icon={<DeleteOutlined />} danger />
+                      </Popconfirm>
+                    </Tooltip>
+                  )}
                 </Button.Group>
               ))}
           </div>
-          {onOpenComments && (
+          {onOpenComments && !isDeleted && (
             <div
               style={{
                 position: "absolute",

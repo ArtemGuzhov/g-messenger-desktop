@@ -1,7 +1,11 @@
-import { NotificationTwoTone } from "@ant-design/icons";
-import { Avatar, Button, Popover, Typography } from "antd";
+// import { NotificationTwoTone } from "@ant-design/icons";
+import {
+  Avatar,
+  // Button, Popover,
+  Typography,
+} from "antd";
 import React, { FC, useContext, useState } from "react";
-import { NotificationPopover } from "./NotificationPopover";
+// import { NotificationPopover } from "./NotificationPopover";
 import { ProfileModal } from "./ProfileModal";
 import { observer } from "mobx-react-lite";
 import { StoreContext } from "../store/store";
@@ -9,12 +13,12 @@ import { AvatarWithImage } from "./AvatarWithImage";
 
 export const ChatSiderHeader: FC = observer(() => {
   const store = useContext(StoreContext);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  // const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  const onSetTime = (time: number) => {
-    setIsNotificationOpen(false);
-  };
+  // const onSetTime = (time: number) => {
+  //   setIsNotificationOpen(false);
+  // };
 
   return (
     <div
@@ -77,7 +81,7 @@ export const ChatSiderHeader: FC = observer(() => {
           alignItems: "center",
         }}
       >
-        <Popover
+        {/* <Popover
           content={<NotificationPopover onSetTime={onSetTime} />}
           trigger="click"
           color="#35345c"
@@ -90,7 +94,7 @@ export const ChatSiderHeader: FC = observer(() => {
             type="text"
             onClick={() => setIsNotificationOpen(true)}
           />
-        </Popover>
+        </Popover> */}
       </div>
     </div>
   );

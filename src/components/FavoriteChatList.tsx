@@ -10,13 +10,22 @@ export const FavoriteChatList: FC = observer(() => {
 
   return (
     <div style={{ width: "100%" }}>
-      <div style={{ display: "flex", padding: "0px 10px 0px 20px" }}>
+      <div
+        style={{
+          display: "flex",
+          padding: "0px 10px 0px 20px",
+          alignItems: "center",
+        }}
+      >
         <StarTwoTone twoToneColor="#A7ADB4" />
         <Typography.Text
           style={{ fontSize: 14, color: "#A7ADB4", marginLeft: 5 }}
         >
           ИЗБРАННЫЕ
         </Typography.Text>
+        <Typography.Text
+          style={{ fontSize: 12, color: "#A7ADB4", marginLeft: 5 }}
+        >{`${store.favoriteChatIds.length}/5`}</Typography.Text>
       </div>
       <div style={{ marginTop: "10px" }}>
         <ChatList chats={store.favoriteChatList} />

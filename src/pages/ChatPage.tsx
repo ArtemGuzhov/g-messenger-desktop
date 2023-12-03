@@ -45,7 +45,7 @@ export const ChatPage: FC<{
         });
         store.removeError(e.id);
       }
-    }, [store.notifications]);
+    }, [store.errors]);
 
     useEffect(() => {
       if (!store.isInitLoading && store.profile === null) {

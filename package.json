@@ -1,6 +1,6 @@
 {
   "name": "g-messenger-desktop",
-  "productName": "g-messenger-desktop",
+  "productName": "G-Messenger",
   "version": "1.0.0",
   "main": ".webpack/main",
   "scripts": {
@@ -8,13 +8,30 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "build": "electron-builder"
+  },
+  "repository": "https://github.com/ArtemGuzhov/g-messenger-desktop",
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
+  "build": {
+    "appId": "com.guzhov.messenger",
+    "productName": "G-Messenger",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "dist"
+    }
   },
   "keywords": [],
   "author": {
     "name": "artm_gzhv",
     "email": "artem.guzhovevg@gmail.com"
   },
+  "devTools": false,
   "license": "MIT",
   "devDependencies": {
     "@electron-forge/cli": "^6.4.2",
@@ -32,6 +49,7 @@
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
     "css-loader": "^6.0.0",
     "electron": "27.0.2",
+    "electron-updater": "^6.1.7",
     "eslint": "^8.0.1",
     "eslint-plugin-import": "^2.25.0",
     "fork-ts-checker-webpack-plugin": "^7.2.13",

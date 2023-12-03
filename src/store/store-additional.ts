@@ -12,6 +12,8 @@ export enum ChatType {
 
 export enum MessageType {
   DEFAULT = "DEFAULT",
+  INVITE = "INVITE",
+  LEAVE = "LEAVE",
 }
 
 export enum MessageStatus {
@@ -32,6 +34,18 @@ export enum ChatEvent {
   CREATED_MESSAGE = "created-message",
   DELETE_MESSAGE = "delete-chat",
   DELETED_MESSAGE = "deleted-message",
+  INVITE_USER = "invite-user",
+  INVITE_SENT = "invite-sent",
+  INVITE_ERROR = "invite-error",
+  ACCEPT_INVITE = "accept-invite",
+  REJECT_INVITE = "reject-invite",
+  ANSWER_ON_INVITE = "answer-on-invite",
+}
+
+export enum MessageInviteStatus {
+  ACCEPTED = "ACCEPTED",
+  REJECTED = "REJECTED",
+  PENDING = "PENDING",
 }
 
 export interface SimpleFile {
@@ -60,6 +74,7 @@ export interface User {
   company: {
     name: string;
   };
+  isExpect?: boolean;
 }
 
 export interface Message {
@@ -81,6 +96,9 @@ export interface Message {
   repliedToId: string | null;
   simpleUser: SimpleUser;
   rootId: string | null;
+  inviteChatId: string | null;
+  inviteChat: Chat | null;
+  inviteStatus: MessageInviteStatus | null;
 }
 
 export interface Chat {
@@ -97,6 +115,7 @@ export interface Chat {
   label?: string;
   lastMessage?: string | null;
   isFavorite?: boolean;
+  creatorId: string;
 }
 
 export interface CreateChatPayload {

@@ -12,6 +12,7 @@ import { observer } from "mobx-react-lite";
 import { Message, MessageStatus } from "../store/store-additional";
 import { getCommentsCountLabel, getMessageTime } from "../helpers";
 import { AvatarWithImage } from "./AvatarWithImage";
+import { MessageImage } from "./MessageImage";
 
 export const DefaultMessage: FC<{
   isOnlyMsg?: boolean;
@@ -117,8 +118,22 @@ export const DefaultMessage: FC<{
             ) : (
               <Typography.Paragraph>{message.text ?? ""}</Typography.Paragraph>
             )}
+            {message.files.length && !isDeleted ? (
+              <div style={{ marginTop: 10, marginBottom: 20 }}>
+                {message.files.map((file) => (
+                  <MessageImage
+                    fileId={file.id}
+                    width={"10vw"}
+                    key={file.id}
+                    height={"20vh"}
+                  />
+                ))}
+              </div>
+            ) : (
+              <></>
+            )}
           </div>
-          <div style={{ position: "absolute", right: 10, top: "-10px" }}>
+          <div style={{ position: "absolute", right: "10px", top: "-10px" }}>
             {isFocus &&
               !isDeleted &&
               (message.status === MessageStatus.ERROR ||

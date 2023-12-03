@@ -13,6 +13,7 @@ import React, { FC, useContext, useEffect, useState } from "react";
 import { StoreContext } from "../store/store";
 import { observer } from "mobx-react-lite";
 import { CreateChatPayload } from "../store/store-additional";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const CreateChatModal: FC<{
   isOpen: boolean;
@@ -72,22 +73,36 @@ export const CreateChatModal: FC<{
       </Divider>
       <div
         style={{
-          display: "flex",
           width: "100%",
-          justifyContent: "center",
-          alignItems: "center",
         }}
       >
-        <Upload listType="picture-circle" showUploadList={false}>
-          <PlusOutlined />
-          Фото
-        </Upload>
-        <Input
-          style={{ marginLeft: 25 }}
-          addonBefore="Название чата"
-          value={chat.name}
-          onChange={(e) => setChat({ ...chat, name: e.target.value })}
-        />
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Upload listType="picture-circle" showUploadList={false}>
+            <PlusOutlined />
+            Фото
+          </Upload>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Input
+            addonBefore="Название чата"
+            value={chat.name}
+            onChange={(e) => setChat({ ...chat, name: e.target.value })}
+          />
+        </div>
       </div>
       <Divider style={{ marginTop: 0 }}>
         <Typography.Text type="secondary">Пользователи</Typography.Text>
@@ -127,7 +142,16 @@ export const CreateChatModal: FC<{
               onClick={() => onAddOrDelUser(user.id)}
             >
               <div>
-                <Avatar size="large" />
+                {user.avatar ? (
+                  <AvatarWithImage
+                    alt="user-item-avatar"
+                    fileId={user.avatar.id}
+                    title={user.name[0]}
+                    size="large"
+                  />
+                ) : (
+                  <Avatar size="large">{user.name[0]}</Avatar>
+                )}
               </div>
               <div style={{ flex: 1, marginLeft: 10 }}>
                 <Typography.Text>{user.name}</Typography.Text>

@@ -1,16 +1,14 @@
-import { Avatar } from "antd";
+import { Image } from "antd";
 import React, { FC, useContext, useEffect, useState } from "react";
 import $api from "../http";
 import { observer } from "mobx-react-lite";
 import { StoreContext } from "../store/store";
 
-export const AvatarWithImage: FC<{
+export const MessageImage: FC<{
   fileId: string;
-  size?: number | "large" | "small" | "default";
-  alt: string;
-  title: string;
-  onClick?: () => void;
-}> = observer(({ size, alt, fileId, onClick, title }) => {
+  width: string | number;
+  height: string | number;
+}> = observer(({ fileId, width, height }) => {
   const store = useContext(StoreContext);
   const [image, setImage] = useState(null);
   useEffect(() => {
@@ -40,15 +38,5 @@ export const AvatarWithImage: FC<{
     setImage(existFile.image);
   }, [fileId]);
 
-  return (
-    <Avatar
-      size={size ?? "default"}
-      alt={alt}
-      src={image ?? ""}
-      crossOrigin="anonymous"
-      onClick={onClick}
-    >
-      {title}
-    </Avatar>
-  );
+  return <Image width={width} src={image} height={height} />;
 });

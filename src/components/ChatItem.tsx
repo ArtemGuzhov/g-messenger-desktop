@@ -43,7 +43,7 @@ export const ChatItem: FC<Chat> = observer(
                 width: 10,
                 borderRadius: 10,
                 backgroundColor: "#C94E4E",
-                visibility: isNotReadMessagesCount ? "visible" : "hidden",
+                visibility: "hidden", //isNotReadMessagesCount ? "visible" : "hidden",
               }}
             ></div>
           </div>
@@ -62,16 +62,32 @@ export const ChatItem: FC<Chat> = observer(
             )}
           </div>
           <div style={{ marginLeft: "10px", width: "165px" }}>
-            <div>
-              <Typography.Text style={{ color: "#fff", fontSize: 16 }} strong>
+            <div style={{ width: "165px", overflow: "hidden" }}>
+              <Typography.Text
+                style={{
+                  color: "#fff",
+                  fontSize: 16,
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                }}
+                strong
+              >
                 {name}
               </Typography.Text>
             </div>
-            <div>
-              <Typography.Text style={{ color: "#A7ADB4" }}>
+            <div style={{ width: "165px", overflow: "hidden" }}>
+              <Typography.Text
+                style={{
+                  color: "#A7ADB4",
+                  whiteSpace: "nowrap",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {lastMessage
                   ? lastMessage
-                  : store.messageList.length
+                  : store.messageList.length &&
+                    store.selectedChat?.id === id &&
+                    store.messageList[0]?.chatId === id
                   ? "Сообщение удалено"
                   : "Нет сообщений"}
               </Typography.Text>

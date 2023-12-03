@@ -1,16 +1,29 @@
 import {
+  ArrowRightOutlined,
   //   ArrowRightOutlined,
   //   CheckCircleFilled,
   CheckOutlined,
   CloseOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, Tooltip, Typography } from "antd";
+import { Avatar, Button, Spin, Tooltip, Typography } from "antd";
 import React, { FC, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { Message, MessageInviteStatus } from "../store/store-additional";
+import { getMessageTime } from "../helpers";
+import { AvatarWithImage } from "./AvatarWithImage";
 
 export const InviteMessage: FC<{
   isOnlyMsg?: boolean;
-}> = observer(({ isOnlyMsg }) => {
+  message: Message;
+  isMy: boolean;
+  onAnswerOnInvite: (payload: {
+    messageId: string;
+    inviteStatus: MessageInviteStatus;
+    inviteChatId: string;
+  }) => void;
+  onOpenChat: (chatId: string) => void;
+}> = observer(({ isOnlyMsg, message, isMy, onAnswerOnInvite, onOpenChat }) => {
   const [isFocus, setIsFocus] = useState(false);
   const [isCopy, setIsCopy] = useState(false);
 
@@ -46,23 +59,30 @@ export const InviteMessage: FC<{
           >
             {isFocus && (
               <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                16:10
+                {getMessageTime(message.createdAt)}
               </Typography.Text>
             )}
           </div>
+        ) : message?.simpleUser?.avatar ? (
+          <AvatarWithImage
+            fileId={message.simpleUser.avatar.id}
+            size="large"
+            alt={`${message.simpleUser.avatar.id}`}
+            title={message.simpleUser.name[0]}
+          />
         ) : (
-          <Avatar size="large" />
+          <Avatar size="large">{message.simpleUser.name[0]}</Avatar>
         )}
       </div>
       <div style={{ width: "100vw - 380px" }}>
         {!isOnlyMsg && (
           <div style={{ display: "flex", alignItems: "center" }}>
-            <Typography.Text strong>Артем Гужов</Typography.Text>
+            <Typography.Text strong>{message.simpleUser.name}</Typography.Text>
             <Typography.Text
               type="secondary"
               style={{ fontSize: 11, marginLeft: 10 }}
             >
-              16.12
+              {getMessageTime(message.createdAt)}
             </Typography.Text>
           </div>
         )}
@@ -82,49 +102,91 @@ export const InviteMessage: FC<{
               justifyContent: "center",
             }}
           >
-            <Avatar size="large" />
+            {message?.inviteChat?.avatar ? (
+              <AvatarWithImage
+                fileId={message.inviteChat.avatar.id}
+                size="large"
+                alt={`${message.inviteChat.avatar.id}`}
+                title={message.inviteChat.name[0]}
+              />
+            ) : (
+              <Avatar size="large">{message.inviteChat.name[0]}</Avatar>
+            )}
           </div>
           <div style={{ width: "100vw - 380px", paddingLeft: "10px" }}>
             <div style={{ display: "flex", alignItems: "center" }}>
-              <Typography.Text strong>Артем Гужов</Typography.Text>
+              <Typography.Text strong>
+                {message.inviteChat.name}
+              </Typography.Text>
               <Typography.Text
                 type="secondary"
                 style={{ fontSize: 11, marginLeft: 10 }}
               >
-                16.12
+                {getMessageTime(message.createdAt)}
               </Typography.Text>
             </div>
             <Typography.Text type="secondary">
-              Приглашение в группу
+              {message.inviteStatus === MessageInviteStatus.PENDING
+                ? message.text
+                : message.inviteStatus === MessageInviteStatus.ACCEPTED
+                ? "Приглашение принято"
+                : "Приглашение отклонено"}
             </Typography.Text>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginLeft: 10,
-            }}
-          >
-            <Button.Group>
-              <Tooltip title="Отклонить">
-                <Button icon={<CloseOutlined />} danger type="primary" />
-              </Tooltip>
-              <Tooltip title="Принять">
-                <Button
-                  icon={<CheckOutlined />}
-                  style={{ backgroundColor: "#52c41a" }}
-                  type="dashed"
-                />
-              </Tooltip>
-            </Button.Group>
-            {/* <Tooltip title="Перейти">
-              <Button
-                icon={<ArrowRightOutlined />}
-                style={{ backgroundColor: "#52c41a" }}
-              />
-            </Tooltip> */}
-          </div>
+          {!isMy && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                marginLeft: 10,
+              }}
+            >
+              {message.inviteStatus === MessageInviteStatus.PENDING && (
+                <Button.Group>
+                  <Tooltip title="Отклонить">
+                    <Button
+                      icon={<CloseOutlined />}
+                      danger
+                      type="primary"
+                      onClick={() =>
+                        onAnswerOnInvite({
+                          messageId: message.id,
+                          inviteChatId: message.inviteChatId,
+                          inviteStatus: MessageInviteStatus.REJECTED,
+                        })
+                      }
+                    />
+                  </Tooltip>
+                  <Tooltip title="Принять">
+                    <Button
+                      icon={<CheckOutlined />}
+                      type="primary"
+                      onClick={() =>
+                        onAnswerOnInvite({
+                          messageId: message.id,
+                          inviteChatId: message.inviteChatId,
+                          inviteStatus: MessageInviteStatus.ACCEPTED,
+                        })
+                      }
+                    />
+                  </Tooltip>
+                </Button.Group>
+              )}
+              {message.inviteStatus === MessageInviteStatus.ACCEPTED && (
+                <Tooltip title="Перейти">
+                  <Button
+                    icon={<ArrowRightOutlined />}
+                    type="primary"
+                    onClick={() => onOpenChat(message.inviteChat.id)}
+                  />
+                </Tooltip>
+              )}
+            </div>
+          )}
+          {isMy && message.inviteStatus === MessageInviteStatus.PENDING && (
+            <Spin indicator={<LoadingOutlined />} />
+          )}
         </div>
       </div>
     </div>

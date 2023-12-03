@@ -60,7 +60,6 @@ const AuthPage = () => {
               border: "1px solid #35345c",
               padding: 20,
             }}
-            initialValues={{ email: "artem@bk.ru", password: "Qwerty123" }}
             onFinish={onFinish}
             autoComplete="off"
           >

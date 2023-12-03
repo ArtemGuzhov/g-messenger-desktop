@@ -1,8 +1,9 @@
 import { Avatar, Button, Divider, Input, Modal, Typography } from "antd";
-import React, { FC, useContext } from "react";
+import React, { FC, useContext, useState } from "react";
 import { StoreContext } from "../store/store";
 import { observer } from "mobx-react-lite";
 import { AvatarWithImage } from "./AvatarWithImage";
+import { EditAvatarWithImage } from "./EditAvatarWithImage";
 
 export const ProfileModal: FC<{
   isOpen: boolean;
@@ -11,9 +12,15 @@ export const ProfileModal: FC<{
 }> = observer(({ isOpen, onClose, onUpdate }) => {
   const store = useContext(StoreContext);
 
+  const [profile, setProfile] = useState({
+    name: store.profile?.name,
+    label: store.profile?.label,
+    fileId: store.profile?.avatar?.id,
+  });
+
   return (
     <Modal open={isOpen} onCancel={onClose} footer={null}>
-      <div
+      {/* <div
         style={{
           width: "100%",
           display: "flex",
@@ -26,11 +33,12 @@ export const ProfileModal: FC<{
             {store.profile?.name ? store.profile.name[0] : ""}
           </Avatar>
         ) : (
-          <AvatarWithImage
+          <EditAvatarWithImage
             fileId={store.profile.avatar.id}
             size={80}
             alt="profile-avatar-modal"
             title={store.profile.name[0]}
+            onSetFileId={(fileId) => setProfile({ ...profile, fileId })}
           />
         )}
       </div>
@@ -58,7 +66,11 @@ export const ProfileModal: FC<{
           marginTop: 20,
         }}
       >
-        <Input addonBefore="Имя" />
+        <Input
+          addonBefore="Имя"
+          value={profile.name}
+          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+        />
       </div>
       <div
         style={{
@@ -69,19 +81,12 @@ export const ProfileModal: FC<{
           marginTop: 20,
         }}
       >
-        <Input addonBefore="Новый пароль" />
-      </div>
-      <div
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginTop: 20,
-        }}
-      >
-        <Input addonBefore="Новый пароль 2" />
-      </div>
+        <Input
+          addonBefore="Тег"
+          value={profile.label}
+          onChange={(e) => setProfile({ ...profile, label: e.target.value })}
+        />
+      </div> */}
       <div
         style={{
           width: "100%",
@@ -101,14 +106,14 @@ export const ProfileModal: FC<{
             Выйти
           </Button>
         </div>
-        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+        {/* <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
           <Button
             style={{ backgroundColor: "#444375", color: "#fff" }}
             onClick={onUpdate}
           >
             Сохранить
           </Button>
-        </div>
+        </div> */}
       </div>
     </Modal>
   );

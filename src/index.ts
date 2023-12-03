@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from "electron";
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
-declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 if (require("electron-squirrel-startup")) {
   app.quit();
@@ -8,11 +7,10 @@ if (require("electron-squirrel-startup")) {
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
-    height: 600,
-    width: 800,
+    minHeight: 600,
+    minWidth: 800,
     webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      webSecurity: false,
+      devTools: true,
     },
   });
 

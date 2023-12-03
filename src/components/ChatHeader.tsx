@@ -5,16 +5,24 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, Divider, Typography } from "antd";
-import React, { FC, useContext } from "react";
+import React, { FC, useContext, useEffect, useState } from "react";
 import { Chat, ChatType } from "../store/store-additional";
 import { observer } from "mobx-react-lite";
 import { StoreContext } from "../store/store";
 import { AvatarWithImage } from "./AvatarWithImage";
+import { ChatUsersModal } from "./ChatUsersModal";
 
 export const ChatHeader: FC<{
   chat: Chat | null;
 }> = observer(({ chat }) => {
   const store = useContext(StoreContext);
+  const [isChatUserModalOpen, setIsChatUserModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (store.selectedChat && store.selectedChat?.type === ChatType.GROUP) {
+      store.getChatUsers();
+    }
+  }, [chat?.id]);
 
   return (
     <div
@@ -80,10 +88,33 @@ export const ChatHeader: FC<{
             icon={<TeamOutlined twoToneColor="#A7ADB4" />}
             type="text"
             size="large"
+            onClick={() => setIsChatUserModalOpen(true)}
           >
             {chat.usersCount ?? 0}
           </Button>
         </div>
+      )}
+      {chat.type === ChatType.GROUP && (
+        <ChatUsersModal
+          isOpen={isChatUserModalOpen}
+          onClose={() => setIsChatUserModalOpen(false)}
+          onInvite={(profileId: string) =>
+            store.inviteUser(profileId, store.selectedChat.id)
+          }
+          users={store.chatUserList}
+          isLoading={store.isChatUserListLoading}
+          inviteUsers={store.userList
+            .filter((user) => {
+              return !store.chatUserList.find((u) => u.id === user.id);
+            })
+            .map((user) => ({
+              label: user.name,
+              value: user.name,
+              id: user.id,
+            }))}
+          isInviteLoading={!!store.userInvitedId}
+          isAdmin={store.profile?.id === store.selectedChat?.creatorId}
+        />
       )}
     </div>
   );

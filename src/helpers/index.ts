@@ -77,13 +77,20 @@ export const getCommentsCountLabel = (count?: number): string => {
   return `${count} комментариев`;
 };
 
+const getWeekDay = (date: string) => {
+  const days = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+
+  return days[new Date(date).getDay()];
+};
+
 export const getDividerTime = (createdAt: string): string => {
   const nowAt = new Date().toLocaleDateString("ru");
+  const weekDay = getWeekDay(createdAt);
   createdAt = new Date(createdAt).toLocaleDateString("ru");
 
   if (nowAt === createdAt) {
     return "Сегодня";
   }
 
-  return createdAt;
+  return `${weekDay}, ${createdAt}`;
 };
