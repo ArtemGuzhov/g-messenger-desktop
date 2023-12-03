@@ -10,7 +10,7 @@ const createWindow = (): void => {
     minHeight: 600,
     minWidth: 800,
     webPreferences: {
-      devTools: true,
+      devTools: false,
     },
   });
 
