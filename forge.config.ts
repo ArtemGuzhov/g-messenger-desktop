@@ -24,10 +24,10 @@ const config: ForgeConfig = {
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
       mainConfig,
-      // devContentSecurityPolicy:
-      //   "connect-src 'self' http://45.84.224.71:3000 ws://45.84.224.71:3000 'unsafe-eval'",
       devContentSecurityPolicy:
-        "connect-src 'self' http://localhost:3010 ws://localhost:3010 'unsafe-eval'",
+        "connect-src 'self' http://45.84.224.71:3000 ws://45.84.224.71:3000 'unsafe-eval'",
+      // devContentSecurityPolicy:
+      //   "connect-src 'self' http://localhost:3010 ws://localhost:3010 'unsafe-eval'",
       renderer: {
         config: rendererConfig,
         entryPoints: [
